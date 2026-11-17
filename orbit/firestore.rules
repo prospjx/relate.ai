@@ -1,0 +1,206 @@
+rules_version = '2';
+
+// Orbit Firestore rules.
+// Data layout (see lib/models and lib/data):
+//   users/{uid}
+//   conversations/{conversationId}
+//   conversations/{conversationId}/messages/{messageId}
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function me() {
+      return request.auth.uid;
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function onlyChanges(keys) {
+      return changedKeys().hasOnly(keys);
+    }
+
+    // Profiles are visible to every signed-in user so people can find each
+    // other. Only the owner can write, and the email must match the account.
+    match /users/{userId} {
+      function validProfile(d) {
+        return d.uid == userId
+          && d.displayName is string
+          && d.displayName.size() > 0
+          && d.displayName.size() <= 80
+          && d.get('about', '') is string
+          && d.get('about', '').size() <= 280
+          && d.get('phone', '') is string
+          && d.get('phone', '').size() <= 40
+          && d.get('online', false) is bool;
+      }
+
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && me() == userId
+        && validProfile(request.resource.data)
+        && request.resource.data.email == request.auth.token.email;
+      allow update: if signedIn()
+        && me() == userId
+        && validProfile(request.resource.data)
+        && request.resource.data.email == resource.data.email;
+      allow delete: if false;
+    }
+
+    match /conversations/{conversationId} {
+      function isMember(data) {
+        return me() in data.memberIds;
+      }
+
+      function directIdMatches(members) {
+        return members.size() == 1
+          ? conversationId == 'dm_' + members[0] + '_' + members[0]
+          : conversationId == 'dm_' + members[0] + '_' + members[1]
+            || conversationId == 'dm_' + members[1] + '_' + members[0];
+      }
+
+      function validNew(d) {
+        return d.type in ['direct', 'group']
+          && d.memberIds is list
+          && me() in d.memberIds
+          && d.memberIds.size() <= 256
+          && d.adminIds is list
+          && d.adminIds.size() <= d.memberIds.size()
+          && d.createdBy == me()
+          && (d.type == 'group'
+            ? me() in d.adminIds
+              && d.name is string
+              && d.name.size() > 0
+              && d.name.size() <= 80
+            : d.memberIds.size() <= 2
+              && (d.get('importSource', null) != null
+                || directIdMatches(d.memberIds)));
+      }
+
+      function onlyMyReadMarker() {
+        return !('lastReadAt' in changedKeys())
+          || request.resource.data.lastReadAt
+            .diff(resource.data.get('lastReadAt', {}))
+            .affectedKeys()
+            .hasOnly([me()]);
+      }
+
+      function leaving() {
+        return onlyChanges(['memberIds', 'adminIds'])
+          && request.resource.data.memberIds.toSet()
+            == resource.data.memberIds.toSet().difference([me()].toSet())
+          && request.resource.data.adminIds.toSet()
+            == resource.data.adminIds.toSet().difference([me()].toSet());
+      }
+
+      // Reading a missing document is allowed so a client can check whether
+      // a direct chat exists before creating it.
+      allow get: if signedIn()
+        && (resource == null || isMember(resource.data));
+      allow list: if signedIn() && isMember(resource.data);
+      allow create: if signedIn() && validNew(request.resource.data);
+      allow update: if signedIn() && isMember(resource.data) && (
+        // Any member: inbox summary and their own read marker.
+        (onlyChanges(['lastMessage', 'updatedAt', 'lastReadAt'])
+          && onlyMyReadMarker())
+        // Group admins: name, photo, and membership.
+        || (resource.data.type == 'group'
+          && me() in resource.data.adminIds
+          && onlyChanges(['name', 'photoUrl', 'memberIds', 'adminIds'])
+          && request.resource.data.memberIds.size() <= 256
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 80)
+        // Any member may leave.
+        || leaving()
+        // The importer may refresh participants and title of their import.
+        || (resource.data.get('importSource', null) != null
+          && resource.data.createdBy == me()
+          && onlyChanges(['name', 'externalParticipants']))
+      );
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        function conversation() {
+          return get(/databases/$(database)/documents/conversations/$(conversationId)).data;
+        }
+
+        function member() {
+          return me() in conversation().memberIds;
+        }
+
+        function validBody(d) {
+          return d.kind in ['text', 'image', 'video', 'audio', 'document', 'gif', 'sticker', 'system']
+            && d.text is string
+            && d.text.size() <= 8000
+            && d.attachments is list
+            && d.attachments.size() <= 10
+            && d.sentAt is timestamp;
+        }
+
+        function liveMessage(d) {
+          return d.senderId == me()
+            && d.get('imported', false) == false
+            && d.deleted == false
+            && d.get('reactions', {}).size() == 0
+            && d.sentAt < request.time + duration.value(5, 'm');
+        }
+
+        // Imported history keeps original timestamps. It can only be
+        // attributed to the importer or to an external address, never to
+        // another Orbit user.
+        function importedMessage(d) {
+          return d.imported == true
+            && d.importedBy == me()
+            && (d.senderId == null || d.senderId == me());
+        }
+
+        function ownReactionOnly() {
+          let after = request.resource.data.get('reactions', {});
+          let before = resource.data.get('reactions', {});
+          return after.diff(before).affectedKeys().hasOnly([me()])
+            && (!(me() in after)
+              || (after[me()] is string && after[me()].size() <= 16));
+        }
+
+        allow read: if signedIn() && member();
+        allow create: if signedIn()
+          && member()
+          && validBody(request.resource.data)
+          && (liveMessage(request.resource.data)
+            || importedMessage(request.resource.data));
+        allow update: if signedIn() && member() && (
+          // Sender edits a text message.
+          (resource.data.senderId == me()
+            && resource.data.deleted == false
+            && resource.data.kind == 'text'
+            && onlyChanges(['text', 'editedAt'])
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 8000)
+          // Sender deletes for everyone, leaving a tombstone.
+          || (resource.data.senderId == me()
+            && onlyChanges(['deleted', 'deletedAt', 'text', 'attachments', 'reactions'])
+            && request.resource.data.deleted == true
+            && request.resource.data.text == ''
+            && request.resource.data.attachments.size() == 0
+            && request.resource.data.get('reactions', {}).size() == 0)
+          // Any member sets or clears their own reaction.
+          || (resource.data.deleted == false
+            && onlyChanges(['reactions'])
+            && ownReactionOnly())
+          // The importer copies tapbacks from the source onto their imports.
+          || (resource.data.get('imported', false) == true
+            && resource.data.importedBy == me()
+            && resource.data.deleted == false
+            && onlyChanges(['reactions'])
+            && request.resource.data.reactions.size() <= 64)
+        );
+        allow delete: if false;
+      }
+    }
+  }
+}

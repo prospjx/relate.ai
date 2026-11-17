@@ -1,0 +1,40 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<!--File Created By SMS Backup & Restore v10.20.002 on 01/03/2024 12:00:00 (synthetic test data, "quotes" > and all)-->
+<?xml-stylesheet type="text/xsl" href="sms.xsl"?>
+<smses count="7" backup_set="00000000-0000-0000-0000-000000000000" backup_date="1709294400000" type="full">
+  <sms protocol="0" address="(555) 123-0001" date="1672567200000" type="1" subject="null" body="Hi from Ana &#55357;&#56832; &amp; welcome" toa="null" sc_toa="null" service_center="null" read="1" status="-1" locked="0" date_sent="1672567190000" sub_id="1" readable_date="Jan 1, 2023 10:00:00 AM" contact_name="Ana Example" />
+  <sms protocol="0" address="+15551230001" date="1672567500000" type="2" subject="null" body="Reply line 1&#10;line 2 with a > sign &lt;tag&gt;" toa="null" sc_toa="null" service_center="null" read="1" status="-1" locked="0" date_sent="0" sub_id="1" readable_date="Jan 1, 2023 10:05:00 AM" contact_name="Ana Example" />
+  <sms protocol="0" address="+15551230001" date="1672567600000" type="3" subject="null" body="draft that should be skipped" read="1" status="-1" locked="0" />
+  <mms date="1672570800000" rr="null" sub="null" ct_t="application/vnd.wap.multipart.related" read_status="null" seen="1" msg_box="1" address="+15551230001~+15551230002" sub_cs="null" resp_st="null" retr_st="null" d_tm="null" text_only="0" exp="null" locked="0" m_id="mms-group-0001" st="null" retr_txt_cs="null" retr_txt="null" creator="com.google.android.apps.messaging" date_sent="1672570790000" read="1" m_size="1234" rpt_a="null" ct_cls="null" pri="null" sub_id="1" tr_id="T0001" resp_txt="null" ct_l="null" m_cls="personal" d_rpt="129" v="18" m_type="132" readable_date="Jan 1, 2023 11:00:00 AM" contact_name="Ana Example, Ben Example">
+    <parts>
+      <part seq="-1" ct="application/smil" name="null" chset="null" cd="null" fn="null" cid="&lt;smil&gt;" cl="smil.xml" ctt_s="null" ctt_t="null" text="&lt;smil&gt;&lt;body&gt;&lt;par dur=&quot;5000ms&quot;&gt;&lt;img src=&quot;image000000.png&quot;/&gt;&lt;/par&gt;&lt;/body&gt;&lt;/smil&gt;" />
+      <part seq="0" ct="image/png" name="null" chset="null" cd="null" fn="null" cid="&lt;image000000&gt;" cl="image000000.png" ctt_s="null" ctt_t="null" text="null" data="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" />
+      <part seq="0" ct="text/plain" name="null" chset="106" cd="null" fn="null" cid="&lt;text000001&gt;" cl="text000001.txt" ctt_s="null" ctt_t="null" text="Group photo from Ben" />
+    </parts>
+    <addrs>
+      <addr address="+15551230002" type="137" charset="106" />
+      <addr address="+15550009999" type="151" charset="106" />
+      <addr address="+15551230001" type="151" charset="106" />
+    </addrs>
+  </mms>
+  <mms date="1672574400000" msg_box="2" address="+15551230001" read="1" m_id="mms-sent-0002" tr_id="T0002" text_only="0" m_type="128" ct_t="application/vnd.wap.multipart.related" contact_name="Ana Example">
+    <parts>
+      <part seq="0" ct="image/jpeg" name="null" cl="null" text="null" />
+    </parts>
+    <addrs>
+      <addr address="insert-address-token" type="137" charset="106" />
+      <addr address="+15551230001" type="151" charset="106" />
+    </addrs>
+  </mms>
+  <mms date="1672578000000" msg_box="1" address="5f1c2e9a-0000-4000-8000-000000000000@rcs.google.com" read="0" m_id="null" tr_id="proto:CkIKImRlbW8tcmNzLW1lc3NhZ2UtaWQ=" text_only="1" m_type="132" ct_t="application/vnd.wap.multipart.related" restricted="0">
+    <parts>
+      <part seq="0" ct="text/plain" name="null" chset="106" cl="text0.txt" text="RCS group message" />
+    </parts>
+    <addrs>
+      <addr address="+15551230001" type="137" charset="106" />
+      <addr address="+15551230002" type="151" charset="106" />
+      <addr address="+15550009999" type="151" charset="106" />
+    </addrs>
+  </mms>
+  <sms protocol="0" address="BANK" date="1672664400000" type="1" subject="null" body="Code 9876" read="0" status="-1" locked="0" contact_name="(Unknown)" />
+</smses>

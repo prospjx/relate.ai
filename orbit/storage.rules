@@ -1,0 +1,39 @@
+rules_version = '2';
+
+// Orbit Storage rules. Chat files are readable only by members of the
+// conversation, checked against Firestore (cross-service rules).
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isMember(conversationId) {
+      return request.auth.uid in firestore.get(
+        /databases/(default)/documents/conversations/$(conversationId)
+      ).data.memberIds;
+    }
+
+    // Profile pictures: anyone signed in can view, only the owner can write.
+    match /avatars/{userId}/{fileName} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if signedIn() && request.auth.uid == userId;
+    }
+
+    // Chat attachments: chats/{conversationId}/{uploaderUid}/{file}
+    match /chats/{conversationId}/{uploaderId}/{fileName} {
+      allow read: if signedIn() && isMember(conversationId);
+      allow create: if signedIn()
+        && request.auth.uid == uploaderId
+        && isMember(conversationId)
+        && request.resource.size < 50 * 1024 * 1024;
+      allow update: if false;
+      allow delete: if signedIn() && request.auth.uid == uploaderId;
+    }
+  }
+}
