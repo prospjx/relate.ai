@@ -218,12 +218,7 @@ final summary = await ImportEngine(contacts: await ContactBook.fromVcfFile(vcf))
 
 The column names deliberately match SMS Backup & Restore's attributes, so both Android sources share `SmsRecordMapper` and generate **identical message keys**. Importing from a backup and from the phone never creates duplicates.
 
-Reference Kotlin code is in `lib/import/android/OrbitSmsImportPlugin.kt`. To enable it:
-
-1. Copy the file to `android/app/src/main/kotlin/<package>/` and fix the `package` line.
-2. Add `<uses-permission android:name="android.permission.READ_SMS" />` to `AndroidManifest.xml`.
-3. In `MainActivity.configureFlutterEngine`, call `flutterEngine.plugins.add(OrbitSmsImportPlugin())`.
-4. Ship it only in builds that are allowed to hold READ_SMS. Without the native side, the source reports a friendly "not included in this build" error.
+The Kotlin side is `android/app/src/main/kotlin/com/orbit/orbit/OrbitSmsImportPlugin.kt`, registered in `MainActivity.configureFlutterEngine`, and `READ_SMS` is declared in `AndroidManifest.xml`. A Google Play build would have to remove the permission and the plugin unless Orbit becomes the default SMS app. Without the native side, the source reports a friendly "not included in this build" error.
 
 The Kotlin side is untested. It pages with `LIMIT` in the sort order, which the Telephony provider accepts on the devices we know of. If a device rejects it, switch to `ContentResolver.QUERY_ARG_LIMIT` query arguments (API 26+).
 

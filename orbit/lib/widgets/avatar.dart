@@ -4,8 +4,8 @@ import '../theme/orbit_theme.dart';
 import 'net_image.dart';
 import 'user_profile_builder.dart';
 
-/// Circle avatar showing a photo when available, otherwise initials on a
-/// color derived from [seed].
+/// Circle avatar showing a photo when available, otherwise initials or [icon]
+/// on a calm neutral surface from [MessengerPalette].
 class AvatarBubble extends StatelessWidget {
   const AvatarBubble({
     super.key,
@@ -24,24 +24,15 @@ class AvatarBubble extends StatelessWidget {
   final bool online;
   final IconData? icon;
 
-  static double hueFor(String seed) {
-    var hash = 0;
-    for (final unit in seed.codeUnits) {
-      hash = (hash * 31 + unit) & 0x7fffffff;
-    }
-    return (hash % 340).toDouble();
-  }
-
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     final initials = name
         .split(' ')
         .where((part) => part.isNotEmpty)
         .take(2)
         .map((part) => part[0].toUpperCase())
         .join();
-    final color =
-        HSLColor.fromAHSL(1, hueFor(seed ?? name), 0.38, 0.48).toColor();
     final url = photoUrl;
 
     final circle = Container(
@@ -49,17 +40,22 @@ class AvatarBubble extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: palette.avatarFill,
+        shape: BoxShape.circle,
+      ),
       child: url != null && url.isNotEmpty
           ? NetImage(url, width: size, height: size)
           : icon != null
-              ? Icon(icon, color: Colors.white, size: size * 0.5)
+              ? Icon(icon, color: palette.avatarInk, size: size * 0.48)
               : Text(
                   initials.isEmpty ? '?' : initials,
                   style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: size * 0.32,
+                    color: palette.avatarInk,
+                    fontWeight: FontWeight.w600,
+                    fontSize: size * 0.36,
+                    letterSpacing: -0.2,
+                    height: 1,
                   ),
                 ),
     );
@@ -84,9 +80,12 @@ class AvatarBubble extends StatelessWidget {
                   width: dot,
                   height: dot,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF22C55E),
+                    color: palette.online,
                     shape: BoxShape.circle,
-                    border: Border.all(color: OrbitColors.desk, width: 2),
+                    border: Border.all(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),

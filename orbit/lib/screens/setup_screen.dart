@@ -20,29 +20,45 @@ class SetupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     final text = Theme.of(context).textTheme;
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
+            constraints: const BoxConstraints(maxWidth: 540),
             child: ListView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               shrinkWrap: true,
               children: [
-                const Icon(Icons.cloud_off_rounded,
-                    size: 40, color: OrbitColors.accent),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Icon(
+                    Icons.cloud_off_rounded,
+                    size: 36,
+                    color: palette.secondaryInk,
+                  ),
+                ),
                 const SizedBox(height: 16),
-                Text('Connect Orbit to Firebase',
-                    style: text.headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  'Connect Orbit to Firebase',
+                  style: text.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: palette.ink,
+                    letterSpacing: -0.3,
+                  ),
+                ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Orbit uses Firebase for accounts, messages, and media. '
                   'This build has not been connected to a Firebase project yet.',
-                  style: TextStyle(color: OrbitColors.soft, height: 1.5),
+                  style: TextStyle(
+                    color: palette.secondaryInk,
+                    fontSize: 15,
+                    height: 1.5,
+                  ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 22),
                 for (var i = 0; i < _steps.length; i++)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -51,38 +67,55 @@ class SetupScreen extends StatelessWidget {
                       children: [
                         SizedBox(
                           width: 28,
-                          child: Text('${i + 1}.',
-                              style: const TextStyle(color: OrbitColors.soft)),
+                          child: Text(
+                            '${i + 1}.',
+                            style: TextStyle(
+                              color: palette.secondaryInk,
+                              fontWeight: FontWeight.w500,
+                              height: 1.45,
+                            ),
+                          ),
                         ),
                         Expanded(
-                          child: SelectableText(_steps[i],
-                              style: const TextStyle(height: 1.45)),
+                          child: SelectableText(
+                            _steps[i],
+                            style: TextStyle(
+                              color: palette.ink,
+                              height: 1.45,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Full steps are in orbit/README.md.',
-                  style: TextStyle(color: OrbitColors.soft),
+                  style: TextStyle(
+                    color: palette.secondaryInk,
+                    fontSize: 13.5,
+                  ),
                 ),
                 if (error != null) ...[
                   const SizedBox(height: 20),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: OrbitColors.raised,
+                      color: palette.surface,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: OrbitColors.line),
+                      border: Border.all(color: palette.hairline),
                     ),
                     child: SelectableText(
                       error!,
-                      style: const TextStyle(
-                          color: OrbitColors.soft, fontSize: 13),
+                      style: TextStyle(
+                        color: palette.secondaryInk,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ],
-                const SizedBox(height: 20),
+                const SizedBox(height: 22),
                 FilledButton(
                   onPressed: onRetry,
                   style: FilledButton.styleFrom(

@@ -17,10 +17,12 @@ const stickerPack = <Sticker>[
   Sticker('party', 'Party popper'),
   Sticker('coffee', 'Coffee cup'),
   Sticker('star', 'Star'),
-  Sticker('orbit', 'Orbit planet'),
 ];
 
+const _legacyOrbitSticker = Sticker('orbit', 'Orbit planet');
+
 Sticker? stickerById(String? id) {
+  if (id == _legacyOrbitSticker.id) return _legacyOrbitSticker;
   for (final sticker in stickerPack) {
     if (sticker.id == id) return sticker;
   }

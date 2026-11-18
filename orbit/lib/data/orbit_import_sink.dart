@@ -207,14 +207,10 @@ class OrbitImportSink extends ImportSink {
 
   static String _groupName(ImportedThread thread, List<Participant> people) {
     final title = thread.title?.trim() ?? '';
-    final name = title.isNotEmpty
-        ? title
-        : people.isEmpty
-            ? 'Imported group'
-            : people.map((p) => p.label).join(', ');
-    return name.length > _maxGroupName
-        ? '${name.substring(0, _maxGroupName - 1)}…'
-        : name;
+    if (title.isEmpty) return ChatRepository.autoGroupName(people);
+    return title.length > _maxGroupName
+        ? '${title.substring(0, _maxGroupName - 1)}…'
+        : title;
   }
 
   static AttachmentKind _attachmentKind(String mimeType) {

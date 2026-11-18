@@ -149,9 +149,18 @@ class _SinkVisitor implements ImportVisitor {
     }
   }
 
+  /// Saves every thread even if one fails, then rethrows the first failure.
   Future<void> flushAll() async {
+    Object? firstError;
+    StackTrace? firstStack;
     for (final key in _buffers.keys.toList()) {
-      await _flush(key);
+      try {
+        await _flush(key);
+      } catch (e, s) {
+        firstError ??= e;
+        firstStack ??= s;
+      }
     }
+    if (firstError != null) Error.throwWithStackTrace(firstError, firstStack!);
   }
 }

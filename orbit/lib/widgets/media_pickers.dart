@@ -23,10 +23,12 @@ class GifFileChoice extends GifChoice {
 }
 
 Future<GifChoice?> showGifPicker(BuildContext context, GifService gifs) {
+  final palette = MessengerPalette.of(context);
   return showModalBottomSheet<GifChoice>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: OrbitColors.panel,
+    showDragHandle: true,
+    backgroundColor: palette.canvas,
     builder: (context) => FractionallySizedBox(
       heightFactor: 0.75,
       child: _GifSheet(gifs: gifs),
@@ -84,32 +86,42 @@ class _GifSheetState extends State<_GifSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     final fileButton = OutlinedButton.icon(
       onPressed: () => Navigator.pop(context, const GifFileChoice()),
       style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-      icon: const Icon(Icons.folder_open_rounded),
+      icon: const Icon(Icons.folder_open_rounded, size: 18),
       label: const Text('Send a GIF file'),
     );
 
     if (!widget.gifs.isEnabled) {
       return Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(Icons.gif_box_outlined, size: 40, color: OrbitColors.mute),
+            Icon(Icons.gif_box_outlined, size: 34, color: palette.mutedInk),
             const SizedBox(height: 12),
-            Text('GIF search is off',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'GIF search is off',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                color: palette.ink,
+              ),
+            ),
             const SizedBox(height: 8),
-            const Text(
-              'To search GIFs, run Orbit with a Giphy API key:\n'
-              'flutter run --dart-define=GIPHY_API_KEY=your_key\n\n'
+            Text(
+              'Run the app with --dart-define=GIPHY_API_KEY=your_key\n\n'
               'You can still send a GIF file from this device.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: OrbitColors.soft, height: 1.45),
+              style: TextStyle(
+                color: palette.secondaryInk,
+                fontSize: 14,
+                height: 1.45,
+              ),
             ),
             const SizedBox(height: 20),
             fileButton,
@@ -119,15 +131,20 @@ class _GifSheetState extends State<_GifSheet> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: Column(
         children: [
           TextField(
             controller: _query,
             autofocus: true,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: 'Search GIFs',
-              prefixIcon: Icon(Icons.search_rounded),
+              isDense: true,
+              prefixIcon: Icon(
+                Icons.search_rounded,
+                size: 20,
+                color: palette.mutedInk,
+              ),
             ),
             onChanged: (v) {
               _debounce?.cancel();
@@ -139,10 +156,22 @@ class _GifSheetState extends State<_GifSheet> {
           Expanded(
             child: _error != null
                 ? Center(
-                    child: Text(_error!,
-                        style: const TextStyle(color: OrbitColors.soft)))
+                    child: Text(
+                      _error!,
+                      style: TextStyle(
+                        color: palette.secondaryInk,
+                        fontSize: 14,
+                      ),
+                    ),
+                  )
                 : _loading && _results.isEmpty
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2.2),
+                        ),
+                      )
                     : GridView.builder(
                         gridDelegate:
                             const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -173,8 +202,10 @@ class _GifSheetState extends State<_GifSheet> {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Text('Powered by GIPHY',
-                  style: TextStyle(fontSize: 11, color: OrbitColors.mute)),
+              Text(
+                'Powered by GIPHY',
+                style: TextStyle(fontSize: 11, color: palette.mutedInk),
+              ),
               const Spacer(),
               TextButton.icon(
                 onPressed: () => Navigator.pop(context, const GifFileChoice()),
@@ -191,44 +222,56 @@ class _GifSheetState extends State<_GifSheet> {
 }
 
 Future<Sticker?> showStickerPicker(BuildContext context) {
+  final palette = MessengerPalette.of(context);
   return showModalBottomSheet<Sticker>(
     context: context,
-    backgroundColor: OrbitColors.panel,
-    builder: (context) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Stickers', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 4,
-              shrinkWrap: true,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              children: [
-                for (final sticker in stickerPack)
-                  Tooltip(
-                    message: sticker.label,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () => Navigator.pop(context, sticker),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: SvgPicture.asset(
-                          sticker.asset,
-                          semanticsLabel: '${sticker.label} sticker',
+    showDragHandle: true,
+    backgroundColor: palette.canvas,
+    builder: (context) {
+      final sheetPalette = MessengerPalette.of(context);
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Stickers',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: sheetPalette.ink,
+                ),
+              ),
+              const SizedBox(height: 12),
+              GridView.count(
+                crossAxisCount: 4,
+                shrinkWrap: true,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                children: [
+                  for (final sticker in stickerPack)
+                    Tooltip(
+                      message: sticker.label,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => Navigator.pop(context, sticker),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: SvgPicture.asset(
+                            sticker.asset,
+                            semanticsLabel: '${sticker.label} sticker',
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
-    ),
+      );
+    },
   );
 }

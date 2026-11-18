@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../import/util/address.dart';
 import '../models/models.dart';
 
 /// Reads and writes public profiles at `users/{uid}`, including presence.
@@ -30,8 +31,16 @@ class UserRepository {
     required String email,
     String? displayName,
   }) async {
-    final existing = await getUser(uid);
-    if (existing != null) return existing;
+    final snap = await _users.doc(uid).get();
+    if (snap.exists) {
+      final data = snap.data()!;
+      final existing = UserProfile.fromMap(uid, data);
+      final normalized = normalizeAddress(existing.phone);
+      if (normalized.isNotEmpty && data['phoneNormalized'] != normalized) {
+        await _users.doc(uid).update({'phoneNormalized': normalized});
+      }
+      return existing;
+    }
     final name = (displayName ?? '').trim().isNotEmpty
         ? displayName!.trim()
         : email.split('@').first;
@@ -60,7 +69,10 @@ class UserRepository {
       changes['displayNameLower'] = name.toLowerCase();
     }
     if (about != null) changes['about'] = about.trim();
-    if (phone != null) changes['phone'] = phone.trim();
+    if (phone != null) {
+      changes['phone'] = phone.trim();
+      changes['phoneNormalized'] = normalizeAddress(phone);
+    }
     if (photoUrl != null) changes['photoUrl'] = photoUrl;
     if (clearPhoto) changes['photoUrl'] = null;
     if (changes.isEmpty) return;
@@ -90,6 +102,27 @@ class UserRepository {
         .where((d) => d.id != excludeUid)
         .map((d) => UserProfile.fromMap(d.id, d.data()))
         .toList();
+  }
+
+  /// Orbit users whose profile phone number matches one of [numbers], keyed
+  /// by normalized number.
+  Future<Map<String, UserProfile>> findByPhones(
+    Iterable<String> numbers, {
+    String? excludeUid,
+  }) async {
+    final keys = numbers.map(normalizeAddress).where((n) => n.length >= 7).toSet().toList();
+    final found = <String, UserProfile>{};
+    for (var i = 0; i < keys.length; i += 30) {
+      final snap = await _users
+          .where('phoneNormalized', whereIn: keys.skip(i).take(30).toList())
+          .get();
+      for (final d in snap.docs) {
+        if (d.id == excludeUid) continue;
+        final key = d.data()['phoneNormalized'] as String?;
+        if (key != null) found[key] = UserProfile.fromMap(d.id, d.data());
+      }
+    }
+    return found;
   }
 
   Future<void> setPresence(String uid, {required bool online}) {

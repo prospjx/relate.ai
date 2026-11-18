@@ -7,6 +7,7 @@ import 'data/services.dart';
 import 'screens/auth_screen.dart';
 import 'screens/inbox_screen.dart';
 import 'screens/setup_screen.dart';
+import 'services/sms_sync.dart';
 import 'state/session.dart';
 import 'theme/orbit_theme.dart';
 
@@ -42,21 +43,29 @@ class _OrbitAppState extends State<OrbitApp> {
   @override
   Widget build(BuildContext context) {
     final services = _readyServices;
-    return MaterialApp(
-      title: 'Orbit',
-      debugShowCheckedModeBanner: false,
-      theme: buildOrbitTheme(),
-      home: services == null
-          ? SetupScreen(error: _startup.error, onRetry: _retry)
-          : Provider<OrbitServices>.value(
-              value: services,
-              child: const AuthGate(),
-            ),
+    if (services == null) {
+      return orbitApp(SetupScreen(error: _startup.error, onRetry: _retry));
+    }
+    return Provider<OrbitServices>.value(
+      value: services,
+      child: const AuthGate(),
     );
   }
 }
 
+/// Providers sit above [MaterialApp] so every pushed route can read them.
+Widget orbitApp(Widget home) => MaterialApp(
+      title: 'Messages',
+      debugShowCheckedModeBanner: false,
+      theme: buildLightTheme(),
+      darkTheme: buildDarkTheme(),
+      themeMode: ThemeMode.system,
+      home: home,
+    );
+
 /// Shows sign in when signed out, otherwise the inbox for that user.
+/// Signing in or out swaps the whole app, so no screen of the previous user
+/// stays on the navigation stack.
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
@@ -68,17 +77,57 @@ class AuthGate extends StatelessWidget {
       initialData: services.auth.currentUser,
       builder: (context, snap) {
         final user = snap.data;
-        if (user == null) return const AuthScreen();
-        return ChangeNotifierProvider<Session>(
-          key: ValueKey(user.uid),
-          create: (_) => Session(
-            services: services,
-            uid: user.uid,
-            email: user.email ?? '',
-          )..start(displayName: user.displayName),
-          child: const InboxScreen(),
-        );
+        if (user == null) return orbitApp(const AuthScreen());
+        return SignedInScope(key: ValueKey(user.uid), user: user);
       },
+    );
+  }
+}
+
+/// Owns everything tied to the signed-in user for as long as they stay
+/// signed in.
+class SignedInScope extends StatefulWidget {
+  const SignedInScope({super.key, required this.user});
+
+  final User user;
+
+  @override
+  State<SignedInScope> createState() => _SignedInScopeState();
+}
+
+class _SignedInScopeState extends State<SignedInScope> {
+  late final Session _session;
+  late final SmsSync _smsSync;
+
+  @override
+  void initState() {
+    super.initState();
+    final services = context.read<OrbitServices>();
+    final user = widget.user;
+    _session = Session(services: services, uid: user.uid, email: user.email ?? '')
+      ..start(displayName: user.displayName);
+    _smsSync = SmsSync.forUser(
+      services: services,
+      uid: user.uid,
+      displayName: () => _session.displayName,
+    );
+  }
+
+  @override
+  void dispose() {
+    _smsSync.dispose();
+    _session.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<Session>.value(value: _session),
+        ChangeNotifierProvider<SmsSync>.value(value: _smsSync),
+      ],
+      child: orbitApp(const InboxScreen()),
     );
   }
 }

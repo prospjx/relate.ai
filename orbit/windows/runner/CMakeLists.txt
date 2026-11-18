@@ -34,6 +34,9 @@ target_compile_definitions(${BINARY_NAME} PRIVATE "NOMINMAX")
 # dependencies here.
 target_link_libraries(${BINARY_NAME} PRIVATE flutter flutter_wrapper_app)
 target_link_libraries(${BINARY_NAME} PRIVATE "dwmapi.lib")
+# The prebuilt Firebase C++ SDK ships without .pdb files, which makes the linker
+# print thousands of LNK4099 warnings in Debug builds.
+target_link_options(${BINARY_NAME} PRIVATE "/ignore:4099")
 target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
 # Run the Flutter tool portions of the build. This must not be removed.

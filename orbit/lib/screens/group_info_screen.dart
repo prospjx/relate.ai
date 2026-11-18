@@ -49,11 +49,15 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(context, controller.text),
-              child: const Text('Save')),
+            onPressed: () => Navigator.pop(context, controller.text),
+            style: FilledButton.styleFrom(minimumSize: const Size(72, 44)),
+            child: const Text('Save'),
+          ),
         ],
       ),
     );
@@ -84,18 +88,28 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
   Future<void> _remove(Conversation c, String uid, String name) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Remove $name?'),
-        content: const Text('They will no longer see new messages.'),
-        actions: [
-          TextButton(
+      builder: (context) {
+        final palette = MessengerPalette.of(context);
+        return AlertDialog(
+          title: Text('Remove $name?'),
+          content: const Text('They will no longer see new messages.'),
+          actions: [
+            TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
-          FilledButton(
+              style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Remove')),
-        ],
-      ),
+              style: FilledButton.styleFrom(
+                backgroundColor: palette.danger,
+                minimumSize: const Size(84, 44),
+              ),
+              child: const Text('Remove'),
+            ),
+          ],
+        );
+      },
     );
     if (ok != true || !mounted) return;
     try {
@@ -108,20 +122,29 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
   Future<void> _leave(Conversation c) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Leave group?'),
-        content: const Text('You will stop receiving messages from this group.'),
-        actions: [
-          TextButton(
+      builder: (context) {
+        final palette = MessengerPalette.of(context);
+        return AlertDialog(
+          title: const Text('Leave group?'),
+          content:
+              const Text('You will stop receiving messages from this group.'),
+          actions: [
+            TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
-          FilledButton(
+              style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
               onPressed: () => Navigator.pop(context, true),
               style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFE11D48)),
-              child: const Text('Leave')),
-        ],
-      ),
+                backgroundColor: palette.danger,
+                minimumSize: const Size(76, 44),
+              ),
+              child: const Text('Leave'),
+            ),
+          ],
+        );
+      },
     );
     if (ok != true || !mounted) return;
     final navigator = Navigator.of(context);
@@ -138,6 +161,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     final myUid = context.watch<Session>().uid;
     return StreamBuilder<Conversation?>(
       stream: _stream,
@@ -146,116 +170,266 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
         if (c == null) {
           return Scaffold(
             appBar: AppBar(title: const Text('Group info')),
-            body: const Center(child: CircularProgressIndicator()),
+            body: const Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.2),
+              ),
+            ),
           );
         }
         final admin = c.isAdmin(myUid);
         final member = c.memberIds.contains(myUid);
         return Scaffold(
           appBar: AppBar(title: const Text('Group info')),
-          body: ListView(
-            children: [
-              const SizedBox(height: 16),
-              Center(
-                child: AvatarBubble(
-                  name: c.name,
-                  photoUrl: c.photoUrl,
-                  seed: c.id,
-                  size: 88,
-                  icon: Icons.group_rounded,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Center(
-                child: Text(
-                  c.name.isEmpty ? 'Group' : c.name,
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ),
-              Center(
-                child: Text('${c.memberIds.length} members',
-                    style: const TextStyle(color: OrbitColors.soft)),
-              ),
-              const SizedBox(height: 12),
-              if (admin) ...[
-                ListTile(
-                  leading: const Icon(Icons.edit_outlined),
-                  title: const Text('Rename group'),
-                  onTap: () => _rename(c),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.person_add_alt_1_outlined),
-                  title: const Text('Add members'),
-                  onTap: () => _addMembers(c),
-                ),
-              ],
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
-                child: Text('Members',
-                    style: TextStyle(
-                        color: OrbitColors.soft, fontWeight: FontWeight.w600)),
-              ),
-              for (final uid in c.memberIds)
-                UserProfileBuilder(
-                  key: ValueKey(uid),
-                  uid: uid,
-                  builder: (context, profile) {
-                    final name = profile?.displayName ?? '…';
-                    return ListTile(
-                      minTileHeight: 56,
-                      leading: AvatarBubble(
-                        name: name,
-                        photoUrl: profile?.photoUrl,
-                        seed: uid,
-                        online: profile?.isOnlineAt(DateTime.now()) ?? false,
-                      ),
-                      title: Text(uid == myUid ? '$name (you)' : name),
-                      subtitle: profile == null
-                          ? null
-                          : Text(presenceLabel(profile, DateTime.now()),
-                              style: const TextStyle(color: OrbitColors.soft)),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (c.isAdmin(uid))
-                            const Text('Admin',
-                                style: TextStyle(
-                                    color: OrbitColors.accent, fontSize: 12)),
-                          if (admin && uid != myUid)
-                            IconButton(
-                              tooltip: 'Remove $name',
-                              onPressed: () => _remove(c, uid, name),
-                              icon: const Icon(
-                                  Icons.remove_circle_outline_rounded),
-                            ),
-                        ],
-                      ),
-                      onTap: uid == myUid
-                          ? null
-                          : () => Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => UserProfileScreen(uid: uid),
-                              )),
-                    );
-                  },
-                ),
-              const SizedBox(height: 16),
-              if (member)
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: OutlinedButton.icon(
-                    onPressed: () => _leave(c),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                      foregroundColor: const Color(0xFFFB7185),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                children: [
+                  Center(
+                    child: AvatarBubble(
+                      name: c.name,
+                      photoUrl: c.photoUrl,
+                      seed: c.id,
+                      size: 88,
+                      icon: Icons.group_rounded,
                     ),
-                    icon: const Icon(Icons.logout_rounded),
-                    label: const Text('Leave group'),
                   ),
-                ),
-            ],
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      c.name.isEmpty ? 'Group' : c.name,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: palette.ink,
+                            letterSpacing: -0.3,
+                          ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Center(
+                    child: Text(
+                      '${c.memberIds.length} ${c.memberIds.length == 1 ? 'member' : 'members'}',
+                      style: TextStyle(
+                        color: palette.secondaryInk,
+                        fontSize: 14,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  if (admin) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Container(
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          color: palette.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: palette.hairline),
+                        ),
+                        child: Material(
+                          type: MaterialType.transparency,
+                          child: Column(
+                            children: [
+                              ListTile(
+                                leading: Icon(
+                                  Icons.edit_outlined,
+                                  size: 20,
+                                  color: palette.accent,
+                                ),
+                                title: Text(
+                                  'Rename group',
+                                  style: TextStyle(
+                                    color: palette.ink,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                trailing: Icon(
+                                  Icons.chevron_right_rounded,
+                                  size: 20,
+                                  color: palette.mutedInk,
+                                ),
+                                onTap: () => _rename(c),
+                              ),
+                              Divider(
+                                height: 1,
+                                thickness: 1,
+                                indent: 52,
+                                color: palette.hairline,
+                              ),
+                              ListTile(
+                                leading: Icon(
+                                  Icons.person_add_alt_1_outlined,
+                                  size: 20,
+                                  color: palette.accent,
+                                ),
+                                title: Text(
+                                  'Add members',
+                                  style: TextStyle(
+                                    color: palette.ink,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                trailing: Icon(
+                                  Icons.chevron_right_rounded,
+                                  size: 20,
+                                  color: palette.mutedInk,
+                                ),
+                                onTap: () => _addMembers(c),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                    child: Text(
+                      'Members',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: palette.secondaryInk,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        color: palette.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: palette.hairline),
+                      ),
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: Column(
+                          children: [
+                            for (var i = 0; i < c.memberIds.length; i++) ...[
+                              if (i > 0)
+                                Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  indent: 72,
+                                  color: palette.hairline,
+                                ),
+                              UserProfileBuilder(
+                                key: ValueKey(c.memberIds[i]),
+                                uid: c.memberIds[i],
+                                builder: (context, profile) {
+                                  final uid = c.memberIds[i];
+                                  final name = profile?.displayName ?? '…';
+                                  return ListTile(
+                                    minTileHeight: 56,
+                                    horizontalTitleGap: 16,
+                                    leading: AvatarBubble(
+                                      name: name,
+                                      photoUrl: profile?.photoUrl,
+                                      seed: uid,
+                                      size: 40,
+                                      online:
+                                          profile?.isOnlineAt(DateTime.now()) ??
+                                              false,
+                                    ),
+                                    title: Text(
+                                      uid == myUid ? '$name (you)' : name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: palette.ink,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    subtitle: profile == null
+                                        ? null
+                                        : Text(
+                                            presenceLabel(
+                                              profile,
+                                              DateTime.now(),
+                                            ),
+                                            style: TextStyle(
+                                              color: palette.secondaryInk,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (c.isAdmin(uid))
+                                          Text(
+                                            'Admin',
+                                            style: TextStyle(
+                                              color: palette.secondaryInk,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        if (admin && uid != myUid)
+                                          IconButton(
+                                            constraints: const BoxConstraints(
+                                              minWidth: 44,
+                                              minHeight: 44,
+                                            ),
+                                            tooltip: 'Remove $name',
+                                            onPressed: () =>
+                                                _remove(c, uid, name),
+                                            icon: Icon(
+                                              Icons
+                                                  .remove_circle_outline_rounded,
+                                              color: palette.danger,
+                                              size: 20,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    onTap: uid == myUid
+                                        ? null
+                                        : () => Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    UserProfileScreen(uid: uid),
+                                              ),
+                                            ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (member)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+                      child: OutlinedButton.icon(
+                        onPressed: () => _leave(c),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          foregroundColor: palette.danger,
+                          side: BorderSide(
+                            color: palette.danger.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        icon: const Icon(Icons.logout_rounded, size: 18),
+                        label: const Text('Leave group'),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -287,9 +461,21 @@ class _AddMembersScreenState extends State<_AddMembersScreen> {
               onPressed: _selected.isEmpty
                   ? null
                   : () => Navigator.pop(context, _selected.keys.toList()),
-              style: FilledButton.styleFrom(minimumSize: const Size(72, 44)),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(72, 36),
+                tapTargetSize: MaterialTapTargetSize.padded,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               child: Text(
-                  _selected.isEmpty ? 'Add' : 'Add ${_selected.length}'),
+                _selected.isEmpty ? 'Add' : 'Add ${_selected.length}',
+              ),
             ),
           ),
         ],

@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../data/media_repository.dart';
 import '../data/orbit_import_sink.dart';
 import '../data/services.dart';
+import '../import/util/address.dart';
 import '../models/models.dart';
 import '../services/audio_recorder_service.dart';
 import '../services/file_pick.dart';
@@ -397,80 +398,97 @@ class _ChatScreenState extends State<ChatScreen> {
     final myReaction = message.reactions[_session.uid];
     final action = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: OrbitColors.panel,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (!message.deleted)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-                child: Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 4,
-                  children: [
-                    for (final emoji in quickReactions)
-                      Semantics(
-                        button: true,
-                        selected: myReaction == emoji,
-                        label: 'React with $emoji',
-                        excludeSemantics: true,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(999),
-                          onTap: () => Navigator.pop(context, 'react:$emoji'),
-                          child: Container(
-                            width: 48,
-                            height: 48,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: myReaction == emoji
-                                  ? OrbitColors.accent.withValues(alpha: 0.3)
-                                  : null,
+      builder: (context) {
+        final palette = MessengerPalette.of(context);
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!message.deleted) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 14, 12, 10),
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 6,
+                    children: [
+                      for (final emoji in quickReactions)
+                        Semantics(
+                          button: true,
+                          selected: myReaction == emoji,
+                          label: 'React with $emoji',
+                          excludeSemantics: true,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(999),
+                            onTap: () => Navigator.pop(context, 'react:$emoji'),
+                            child: Container(
+                              width: 46,
+                              height: 46,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: myReaction == emoji
+                                    ? palette.accent.withValues(alpha: 0.14)
+                                    : palette.surface,
+                                border: myReaction == emoji
+                                    ? Border.all(
+                                        color: palette.accent
+                                            .withValues(alpha: 0.55),
+                                      )
+                                    : null,
+                              ),
+                              child: Text(
+                                emoji,
+                                style: const TextStyle(fontSize: 23),
+                              ),
                             ),
-                            child: Text(emoji,
-                                style: const TextStyle(fontSize: 24)),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            if (message.reactions.isNotEmpty && !message.deleted)
-              ListTile(
-                leading: const Icon(Icons.emoji_emotions_outlined),
-                title: const Text('See reactions'),
-                onTap: () => Navigator.pop(context, 'reactions'),
-              ),
-            if (message.text.isNotEmpty && !message.deleted)
-              ListTile(
-                leading: const Icon(Icons.copy_rounded),
-                title: const Text('Copy text'),
-                onTap: () => Navigator.pop(context, 'copy'),
-              ),
-            if (mine && !message.deleted && message.kind == MessageKind.text)
-              ListTile(
-                leading: const Icon(Icons.edit_outlined),
-                title: const Text('Edit'),
-                onTap: () => Navigator.pop(context, 'edit'),
-              ),
-            if (mine && !message.deleted)
-              ListTile(
-                leading: const Icon(Icons.delete_outline_rounded,
-                    color: Color(0xFFFB7185)),
-                title: const Text('Delete for everyone'),
-                onTap: () => Navigator.pop(context, 'delete'),
-              ),
-            if (message.senderId != null && !mine)
-              ListTile(
-                leading: const Icon(Icons.person_outline_rounded),
-                title: Text('View ${message.senderLabel}'),
-                onTap: () => Navigator.pop(context, 'profile'),
-              ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+                Divider(height: 1, color: palette.hairline),
+              ],
+              if (message.reactions.isNotEmpty && !message.deleted)
+                ListTile(
+                  leading: const Icon(Icons.emoji_emotions_outlined),
+                  title: const Text('See reactions'),
+                  onTap: () => Navigator.pop(context, 'reactions'),
+                ),
+              if (message.text.isNotEmpty && !message.deleted)
+                ListTile(
+                  leading: const Icon(Icons.copy_rounded),
+                  title: const Text('Copy text'),
+                  onTap: () => Navigator.pop(context, 'copy'),
+                ),
+              if (mine && !message.deleted && message.kind == MessageKind.text)
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('Edit'),
+                  onTap: () => Navigator.pop(context, 'edit'),
+                ),
+              if (mine && !message.deleted)
+                ListTile(
+                  leading: Icon(
+                    Icons.delete_outline_rounded,
+                    color: palette.danger,
+                  ),
+                  title: Text(
+                    'Delete for everyone',
+                    style: TextStyle(color: palette.danger),
+                  ),
+                  onTap: () => Navigator.pop(context, 'delete'),
+                ),
+              if (message.senderId != null && !mine)
+                ListTile(
+                  leading: const Icon(Icons.person_outline_rounded),
+                  title: Text('View ${message.senderLabel}'),
+                  onTap: () => Navigator.pop(context, 'profile'),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
     if (action == null || !mounted) return;
     if (action.startsWith('react:')) {
@@ -500,41 +518,64 @@ class _ChatScreenState extends State<ChatScreen> {
   void _showReactions(Message message) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: OrbitColors.panel,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Text('Reactions',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
-            ),
-            for (final entry in message.reactions.entries)
-              if (entry.key.startsWith(OrbitImportSink.externalReactorPrefix))
-                _externalReactor(entry.key, entry.value)
-              else
-              UserProfileBuilder(
-                uid: entry.key,
-                builder: (context, profile) => ListTile(
-                  leading: AvatarBubble(
-                    name: profile?.displayName ?? entry.key,
-                    photoUrl: profile?.photoUrl,
-                    seed: entry.key,
-                    size: 36,
+      builder: (context) {
+        final palette = MessengerPalette.of(context);
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: Text(
+                  'Reactions',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: palette.ink,
                   ),
-                  title: Text(entry.key == _session.uid
-                      ? 'You'
-                      : profile?.displayName ?? 'Someone'),
-                  trailing:
-                      Text(entry.value, style: const TextStyle(fontSize: 22)),
                 ),
               ),
-          ],
-        ),
-      ),
+              for (final entry in message.reactions.entries)
+                if (entry.key.startsWith(OrbitImportSink.externalReactorPrefix))
+                  _externalReactor(entry.key, entry.value)
+                else
+                  UserProfileBuilder(
+                    uid: entry.key,
+                    builder: (context, profile) => ListTile(
+                      leading: AvatarBubble(
+                        name: profile?.displayName ?? entry.key,
+                        photoUrl: profile?.photoUrl,
+                        seed: entry.key,
+                        size: 36,
+                      ),
+                      title: Text(entry.key == _session.uid
+                          ? 'You'
+                          : profile?.displayName ?? 'Someone'),
+                      trailing: Text(
+                        entry.value,
+                        style: const TextStyle(fontSize: 22),
+                      ),
+                    ),
+                  ),
+            ],
+          ),
+        );
+      },
     );
+  }
+
+  /// Current name of an imported sender, so renamed contacts show up on old
+  /// messages too.
+  static String? _participantName(Conversation c, String? address) {
+    if (address == null) return null;
+    final key = normalizeAddress(address);
+    for (final p in c.externalParticipants) {
+      if (p.displayName.trim().isNotEmpty && normalizeAddress(p.address) == key) {
+        return p.displayName;
+      }
+    }
+    return null;
   }
 
   Widget _externalReactor(String key, String emoji) {
@@ -566,10 +607,12 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
             child: const Text('Cancel'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text),
+            style: FilledButton.styleFrom(minimumSize: const Size(72, 44)),
             child: const Text('Save'),
           ),
         ],
@@ -591,23 +634,29 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _delete(Message message) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete for everyone?'),
-        content: const Text(
-            'Everyone in this chat will see that a message was deleted.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFE11D48)),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final palette = MessengerPalette.of(context);
+        return AlertDialog(
+          title: const Text('Delete for everyone?'),
+          content: const Text(
+              'Everyone in this chat will see that a message was deleted.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(
+                backgroundColor: palette.danger,
+                minimumSize: const Size(76, 44),
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
     );
     if (ok != true) return;
     final attachments = message.attachments;
@@ -637,7 +686,7 @@ class _ChatScreenState extends State<ChatScreen> {
             name: profile?.displayName ?? '',
             photoUrl: profile?.photoUrl,
             seed: otherUid,
-            size: 36,
+            size: 34,
             online: profile?.isOnlineAt(DateTime.now()) ?? false,
           ),
           title: profile?.displayName ?? '…',
@@ -657,7 +706,7 @@ class _ChatScreenState extends State<ChatScreen> {
           name: name,
           photoUrl: c.photoUrl,
           seed: c.id,
-          size: 36,
+          size: 34,
           icon: c.isGroup ? Icons.group_rounded : null,
         ),
         title: name,
@@ -676,7 +725,7 @@ class _ChatScreenState extends State<ChatScreen> {
           onTap: onTap,
           borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
             child: title,
           ),
         ),
@@ -684,6 +733,7 @@ class _ChatScreenState extends State<ChatScreen> {
       actions: [
         if (c.isGroup)
           IconButton(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             tooltip: 'Group info',
             onPressed: onTap,
             icon: const Icon(Icons.info_outline_rounded),
@@ -694,15 +744,22 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     final c = _conversation;
     if (c == null) {
       return Scaffold(
         appBar: AppBar(),
         body: Center(
           child: _conversationMissing
-              ? const Text('This conversation is not available.',
-                  style: TextStyle(color: OrbitColors.soft))
-              : const CircularProgressIndicator(),
+              ? Text(
+                  'This conversation is not available.',
+                  style: TextStyle(color: palette.secondaryInk, fontSize: 14),
+                )
+              : const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2.2),
+                ),
         ),
       );
     }
@@ -712,29 +769,44 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: _appBar(c),
       body: Column(
         children: [
-          Expanded(child: _messageList(c)),
+          Expanded(child: _messageList(c, palette)),
           for (final upload in _uploads)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: palette.surface,
+                border: Border(top: BorderSide(color: palette.hairline)),
+              ),
               child: Row(
                 children: [
-                  const Icon(Icons.upload_rounded,
-                      size: 18, color: OrbitColors.soft),
-                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.arrow_upward_rounded,
+                    size: 16,
+                    color: palette.secondaryInk,
+                  ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Sending ${upload.label}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 12, color: OrbitColors.soft)),
-                        const SizedBox(height: 4),
+                        Text(
+                          'Sending ${upload.label}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: palette.secondaryInk,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
                         LinearProgressIndicator(
-                            value: upload.progress == 0
-                                ? null
-                                : upload.progress),
+                          minHeight: 2.5,
+                          backgroundColor: palette.hairline,
+                          color: palette.accent,
+                          borderRadius: BorderRadius.circular(2),
+                          value: upload.progress == 0 ? null : upload.progress,
+                        ),
                       ],
                     ),
                   ),
@@ -742,14 +814,27 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           if (isMember)
-            _composer()
+            _composer(palette)
           else
-            const SafeArea(
-              top: false,
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Text('You are no longer a member of this group.',
-                    style: TextStyle(color: OrbitColors.soft)),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: palette.surface,
+                border: Border(top: BorderSide(color: palette.hairline)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Text(
+                    'You are no longer a member of this group.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: palette.secondaryInk,
+                      fontSize: 13.5,
+                    ),
+                  ),
+                ),
               ),
             ),
         ],
@@ -757,21 +842,51 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _messageList(Conversation c) {
+  Widget _messageList(Conversation c, MessengerPalette palette) {
     if (_messagesError != null) {
       return Center(
-          child: Text(_messagesError!,
-              style: const TextStyle(color: OrbitColors.soft)));
+        child: Text(
+          _messagesError!,
+          style: TextStyle(color: palette.secondaryInk, fontSize: 14),
+        ),
+      );
     }
     if (!_messagesLoaded) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2.2),
+        ),
+      );
     }
     if (_messages.isEmpty) {
-      return const Center(
-        child: Text(
-          'No messages yet.\nSay hello below.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: OrbitColors.soft, height: 1.4),
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'No messages yet',
+                style: TextStyle(
+                  color: palette.ink,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Say hello below to start the conversation.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: palette.secondaryInk,
+                  fontSize: 13.5,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -791,10 +906,15 @@ class _ChatScreenState extends State<ChatScreen> {
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Start of conversation',
-                      style:
-                          TextStyle(color: OrbitColors.mute, fontSize: 12)),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(
+                      'Start of conversation',
+                      style: TextStyle(
+                        color: palette.mutedInk,
+                        fontSize: 12,
+                      ),
+                    ),
             ),
           );
         }
@@ -805,14 +925,15 @@ class _ChatScreenState extends State<ChatScreen> {
           case MessageEntry(:final message, :final showSender):
             final mine = message.isFrom(_session.uid);
             return Align(
-              alignment:
-                  mine ? Alignment.centerRight : Alignment.centerLeft,
+              alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
               child: MessageBubble(
                 key: ValueKey(message.id),
                 message: message,
                 mine: mine,
                 myUid: _session.uid,
-                showSender: showSender && (c.isGroup || c.importSource != null),
+                showSender:
+                    showSender && (c.isGroup || c.importSource != null),
+                senderLabel: _participantName(c, message.senderAddress),
                 onOpenActions: () => _openActions(message),
                 onToggleReaction: (emoji) => _toggleReaction(message, emoji),
                 onShowReactions: () => _showReactions(message),
@@ -823,123 +944,178 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _composer() {
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: OrbitColors.line)),
-        ),
-        child: _recording
-            ? Row(
-                children: [
-                  IconButton(
-                    tooltip: 'Discard recording',
-                    onPressed: () => _finishRecording(send: false),
-                    icon: const Icon(Icons.delete_outline_rounded),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.fiber_manual_record,
-                      color: Color(0xFFEF4444), size: 14),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Recording ${formatDuration(_recordElapsed)}',
-                      semanticsLabel: 'Recording voice message',
+  Widget _composer(MessengerPalette palette) {
+    final pillBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(22),
+      borderSide: BorderSide(color: palette.hairline),
+    );
+    final focusedPillBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(22),
+      borderSide: BorderSide(color: palette.accent, width: 1.2),
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.canvas,
+        border: Border(top: BorderSide(color: palette.hairline)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+          child: _recording
+              ? Row(
+                  children: [
+                    IconButton(
+                      tooltip: 'Discard recording',
+                      onPressed: () => _finishRecording(send: false),
+                      style: IconButton.styleFrom(
+                        foregroundColor: palette.secondaryInk,
+                        minimumSize: const Size(44, 44),
+                      ),
+                      icon: const Icon(Icons.delete_outline_rounded),
                     ),
-                  ),
-                  IconButton.filled(
-                    tooltip: 'Send voice message',
-                    onPressed: () => _finishRecording(send: true),
-                    style: IconButton.styleFrom(
-                      backgroundColor: OrbitColors.accent,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(44, 44),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.fiber_manual_record,
+                      color: palette.danger,
+                      size: 12,
                     ),
-                    icon: const Icon(Icons.send_rounded),
-                  ),
-                ],
-              )
-            : Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  PopupMenuButton<_Attach>(
-                    tooltip: 'Attach',
-                    icon: const Icon(Icons.add_circle_outline_rounded),
-                    onSelected: _attach,
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                          value: _Attach.photo,
-                          child: _MenuRow(Icons.photo_outlined, 'Photo')),
-                      if (PlatformCaps.camera)
-                        const PopupMenuItem(
-                            value: _Attach.camera,
-                            child: _MenuRow(
-                                Icons.photo_camera_outlined, 'Camera')),
-                      const PopupMenuItem(
-                          value: _Attach.video,
-                          child: _MenuRow(Icons.movie_outlined, 'Video')),
-                      const PopupMenuItem(
-                          value: _Attach.document,
-                          child: _MenuRow(
-                              Icons.description_outlined, 'Document')),
-                      const PopupMenuItem(
-                          value: _Attach.gif,
-                          child: _MenuRow(Icons.gif_box_outlined, 'GIF')),
-                      const PopupMenuItem(
-                          value: _Attach.sticker,
-                          child: _MenuRow(
-                              Icons.emoji_emotions_outlined, 'Sticker')),
-                    ],
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: TextField(
-                      controller: _text,
-                      focusNode: _inputFocus,
-                      minLines: 1,
-                      maxLines: 5,
-                      textCapitalization: TextCapitalization.sentences,
-                      keyboardType: TextInputType.multiline,
-                      decoration: const InputDecoration(
-                        hintText: 'Message',
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Recording ${formatDuration(_recordElapsed)}',
+                        semanticsLabel: 'Recording voice message',
+                        style: TextStyle(
+                          color: palette.ink,
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w500,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _text,
-                    builder: (context, value, _) {
-                      final hasText = value.text.trim().isNotEmpty;
-                      if (hasText) {
+                    IconButton.filled(
+                      tooltip: 'Send voice message',
+                      onPressed: () => _finishRecording(send: true),
+                      style: IconButton.styleFrom(
+                        backgroundColor: palette.accent,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(44, 44),
+                      ),
+                      icon: const Icon(Icons.arrow_upward_rounded, size: 22),
+                    ),
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    PopupMenuButton<_Attach>(
+                      tooltip: 'Attach',
+                      style: IconButton.styleFrom(
+                        foregroundColor: palette.secondaryInk,
+                        minimumSize: const Size(44, 44),
+                      ),
+                      icon: Icon(
+                        Icons.add_rounded,
+                        size: 24,
+                        color: palette.secondaryInk,
+                      ),
+                      onSelected: _attach,
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: _Attach.photo,
+                          child: _MenuRow(Icons.photo_outlined, 'Photo'),
+                        ),
+                        if (PlatformCaps.camera)
+                          const PopupMenuItem(
+                            value: _Attach.camera,
+                            child:
+                                _MenuRow(Icons.photo_camera_outlined, 'Camera'),
+                          ),
+                        const PopupMenuItem(
+                          value: _Attach.video,
+                          child: _MenuRow(Icons.movie_outlined, 'Video'),
+                        ),
+                        const PopupMenuItem(
+                          value: _Attach.document,
+                          child:
+                              _MenuRow(Icons.description_outlined, 'Document'),
+                        ),
+                        const PopupMenuItem(
+                          value: _Attach.gif,
+                          child: _MenuRow(Icons.gif_box_outlined, 'GIF'),
+                        ),
+                        const PopupMenuItem(
+                          value: _Attach.sticker,
+                          child: _MenuRow(
+                              Icons.emoji_emotions_outlined, 'Sticker'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: TextField(
+                        controller: _text,
+                        focusNode: _inputFocus,
+                        minLines: 1,
+                        maxLines: 5,
+                        textCapitalization: TextCapitalization.sentences,
+                        keyboardType: TextInputType.multiline,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: palette.ink,
+                          height: 1.35,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Message',
+                          isDense: true,
+                          filled: true,
+                          fillColor: palette.surface,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          border: pillBorder,
+                          enabledBorder: pillBorder,
+                          focusedBorder: focusedPillBorder,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _text,
+                      builder: (context, value, _) {
+                        final hasText = value.text.trim().isNotEmpty;
+                        if (hasText) {
+                          return IconButton.filled(
+                            tooltip: 'Send',
+                            onPressed: _sendText,
+                            style: IconButton.styleFrom(
+                              backgroundColor: palette.accent,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(44, 44),
+                            ),
+                            icon: const Icon(
+                              Icons.arrow_upward_rounded,
+                              size: 22,
+                            ),
+                          );
+                        }
                         return IconButton.filled(
-                          tooltip: 'Send',
-                          onPressed: _sendText,
+                          tooltip: 'Record voice message',
+                          onPressed: _startRecording,
                           style: IconButton.styleFrom(
-                            backgroundColor: OrbitColors.accent,
-                            foregroundColor: Colors.white,
+                            backgroundColor: palette.surface,
+                            foregroundColor: palette.secondaryInk,
                             minimumSize: const Size(44, 44),
                           ),
-                          icon: const Icon(Icons.send_rounded),
+                          icon: const Icon(Icons.mic_none_rounded, size: 22),
                         );
-                      }
-                      return IconButton.filled(
-                        tooltip: 'Record voice message',
-                        onPressed: _startRecording,
-                        style: IconButton.styleFrom(
-                          backgroundColor: OrbitColors.raised,
-                          foregroundColor: OrbitColors.ink,
-                          minimumSize: const Size(44, 44),
-                        ),
-                        icon: const Icon(Icons.mic_none_rounded),
-                      );
-                    },
-                  ),
-                ],
-              ),
+                      },
+                    ),
+                  ],
+                ),
+        ),
       ),
     );
   }
@@ -953,11 +1129,15 @@ class _MenuRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     return Row(
       children: [
-        Icon(icon, size: 20),
+        Icon(icon, size: 20, color: palette.secondaryInk),
         const SizedBox(width: 12),
-        Text(label),
+        Text(
+          label,
+          style: TextStyle(color: palette.ink, fontSize: 14.5),
+        ),
       ],
     );
   }
@@ -976,6 +1156,7 @@ class _HeaderTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     return Row(
       children: [
         avatar,
@@ -989,16 +1170,22 @@ class _HeaderTitle extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: palette.ink,
+                  letterSpacing: -0.15,
+                ),
               ),
               if (subtitle.isNotEmpty)
                 Text(
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style:
-                      const TextStyle(fontSize: 12, color: OrbitColors.soft),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: palette.secondaryInk,
+                  ),
                 ),
             ],
           ),
@@ -1015,23 +1202,18 @@ class _DaySeparator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          const Expanded(child: Divider(color: OrbitColors.line)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              label,
-              style: const TextStyle(
-                  color: OrbitColors.soft,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600),
-            ),
+      child: Center(
+        child: Text(
+          label,
+          style: TextStyle(
+            color: palette.mutedInk,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
           ),
-          const Expanded(child: Divider(color: OrbitColors.line)),
-        ],
+        ),
       ),
     );
   }

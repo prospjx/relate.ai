@@ -366,6 +366,66 @@ class ChatRepository {
     return conversation;
   }
 
+  static const maxGroupNameLength = 80;
+
+  /// Title for an imported group with no name of its own.
+  static String autoGroupName(List<Participant> people) {
+    final name = people.isEmpty
+        ? 'Imported group'
+        : people.map((p) => p.label).join(', ');
+    return name.length > maxGroupNameLength
+        ? '${name.substring(0, maxGroupNameLength - 1)}…'
+        : name;
+  }
+
+  /// Relabels [importerUid]'s imported chats from [source] with the names
+  /// [lookup] returns (e.g. the phone's contacts). Addresses it has no name
+  /// for keep their current label; group titles change only if they were
+  /// generated from participant names. Returns how many chats changed.
+  Future<int> refreshImportedNames({
+    required String importerUid,
+    required String source,
+    required String? Function(String address) lookup,
+  }) async {
+    final snap = await _conversations
+        .where('memberIds', arrayContains: importerUid)
+        .get();
+    var updated = 0;
+    var batch = _db.batch();
+    var pending = 0;
+    for (final doc in snap.docs) {
+      final c = Conversation.fromMap(doc.id, doc.data());
+      if (c.importSource != source || c.createdBy != importerUid) continue;
+      var changed = false;
+      final people = <Participant>[];
+      for (final p in c.externalParticipants) {
+        final name = lookup(p.address)?.trim() ?? '';
+        if (name.isEmpty || name == p.displayName) {
+          people.add(p);
+        } else {
+          changed = true;
+          people.add(Participant(address: p.address, displayName: name, uid: p.uid));
+        }
+      }
+      if (!changed) continue;
+      final autoNamed = c.isGroup &&
+          (c.name.trim().isEmpty || c.name == autoGroupName(c.externalParticipants));
+      final newName = autoNamed ? autoGroupName(people) : c.name;
+      batch.update(doc.reference, {
+        'externalParticipants': people.map((p) => p.toMap()).toList(),
+        if (newName != c.name) 'name': newName,
+      });
+      updated++;
+      if (++pending == batchSize) {
+        await batch.commit();
+        batch = _db.batch();
+        pending = 0;
+      }
+    }
+    if (pending > 0) await batch.commit();
+    return updated;
+  }
+
   /// Adds participants not seen before (by address) and fills in missing
   /// display names; adopts a new non-empty [name].
   Future<Conversation> _mergeImportedThread(

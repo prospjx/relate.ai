@@ -84,11 +84,12 @@ class _UserSearchState extends State<UserSearch> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     final hasQuery = _query.text.trim().isNotEmpty;
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
           child: TextField(
             controller: _query,
             autofocus: widget.autofocus,
@@ -96,7 +97,12 @@ class _UserSearchState extends State<UserSearch> {
             onSubmitted: _run,
             decoration: InputDecoration(
               hintText: 'Search by email or name',
-              prefixIcon: const Icon(Icons.search_rounded),
+              isDense: true,
+              prefixIcon: Icon(
+                Icons.search_rounded,
+                size: 20,
+                color: palette.mutedInk,
+              ),
               suffixIcon: _loading
                   ? const Padding(
                       padding: EdgeInsets.all(14),
@@ -114,8 +120,11 @@ class _UserSearchState extends State<UserSearch> {
         Expanded(
           child: _error != null
               ? Center(
-                  child: Text(_error!,
-                      style: const TextStyle(color: OrbitColors.soft)))
+                  child: Text(
+                    _error!,
+                    style: TextStyle(color: palette.secondaryInk, fontSize: 14),
+                  ),
+                )
               : _results.isEmpty
                   ? Center(
                       child: Padding(
@@ -123,40 +132,68 @@ class _UserSearchState extends State<UserSearch> {
                         child: Text(
                           hasQuery && !_loading
                               ? 'No one found. Try their full email address.'
-                              : 'Find people who use Orbit.',
+                              : 'Search by name or email to start a chat.',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: OrbitColors.soft),
+                          style: TextStyle(
+                            color: palette.secondaryInk,
+                            fontSize: 14,
+                            height: 1.4,
+                          ),
                         ),
                       ),
                     )
-                  : ListView.builder(
+                  : ListView.separated(
+                      padding: const EdgeInsets.only(bottom: 16),
                       itemCount: _results.length,
+                      separatorBuilder: (context, index) => Divider(
+                        height: 1,
+                        thickness: 1,
+                        indent: 72,
+                        color: palette.hairline,
+                      ),
                       itemBuilder: (context, index) {
                         final user = _results[index];
-                        final selected =
-                            widget.selectedIds.contains(user.uid);
+                        final selected = widget.selectedIds.contains(user.uid);
                         return ListTile(
                           minTileHeight: 56,
+                          horizontalTitleGap: 16,
                           leading: AvatarBubble(
                             name: user.displayName,
                             photoUrl: user.photoUrl,
                             seed: user.uid,
+                            size: 40,
                             online: user.isOnlineAt(DateTime.now()),
                           ),
-                          title: Text(user.displayName),
+                          title: Text(
+                            user.displayName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: palette.ink,
+                            ),
+                          ),
                           subtitle: Text(
                             user.about.isNotEmpty
                                 ? user.about
                                 : presenceLabel(user, DateTime.now()),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: OrbitColors.soft),
+                            style: TextStyle(
+                              color: palette.secondaryInk,
+                              fontSize: 13.5,
+                            ),
                           ),
                           trailing: selected
-                              ? const Icon(Icons.check_circle_rounded,
-                                  color: OrbitColors.accent)
+                              ? Icon(
+                                  Icons.check_circle_rounded,
+                                  color: palette.accent,
+                                  size: 22,
+                                )
                               : null,
                           selected: selected,
+                          selectedTileColor:
+                              palette.accent.withValues(alpha: 0.06),
                           onTap: () => widget.onSelect(user),
                         );
                       },

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 
+import '../../theme/orbit_theme.dart';
 import '../core.dart';
 import '../engine.dart';
 import '../models.dart';
@@ -294,12 +295,19 @@ class _ImportScreenState extends State<ImportScreen> {
     }
   }
 
-  Widget _webUnsupported(BuildContext context) => const Padding(
-        padding: EdgeInsets.all(24),
-        child: Text('Importing chat history needs the desktop or mobile app; browsers cannot read backup files.'),
-      );
+  Widget _webUnsupported(BuildContext context) {
+    final palette = MessengerPalette.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Text(
+        'Importing chat history needs the desktop or mobile app; browsers cannot read backup files.',
+        style: TextStyle(color: palette.secondaryInk, fontSize: 14, height: 1.45),
+      ),
+    );
+  }
 
   Widget _chooseView(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     final desktop = Platform.isWindows || Platform.isMacOS || Platform.isLinux;
     final options = <(ImportSourceKind, IconData, String, String)>[
       if (desktop)
@@ -333,124 +341,349 @@ class _ImportScreenState extends State<ImportScreen> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Text('Where are your old messages?', style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          'Where are your old messages?',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: palette.ink,
+                letterSpacing: -0.3,
+              ),
+        ),
         const SizedBox(height: 6),
         Text(
           'Everything is read on this device. Nothing is uploaded by the importer.',
-          style: Theme.of(context).textTheme.bodyMedium,
+          style: TextStyle(
+            color: palette.secondaryInk,
+            fontSize: 14.5,
+            height: 1.4,
+          ),
         ),
-        const SizedBox(height: 16),
-        for (final (kind, icon, title, subtitle) in options)
-          Card(
-            child: ListTile(
-              leading: Icon(icon),
-              title: Text(title),
-              subtitle: Text(subtitle),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => setState(() => _select(kind)),
+        const SizedBox(height: 20),
+        Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: palette.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: palette.hairline),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: Column(
+              children: [
+                for (var i = 0; i < options.length; i++) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      indent: 52,
+                      color: palette.hairline,
+                    ),
+                  ListTile(
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    horizontalTitleGap: 14,
+                    leading: Icon(
+                      options[i].$2,
+                      size: 22,
+                      color: palette.secondaryInk,
+                    ),
+                    title: Text(
+                      options[i].$3,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 15,
+                        color: palette.ink,
+                      ),
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        options[i].$4,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          color: palette.secondaryInk,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                    trailing: Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: palette.mutedInk,
+                    ),
+                    onTap: () => setState(() => _select(options[i].$1)),
+                  ),
+                ],
+              ],
             ),
           ),
+        ),
       ],
     );
   }
 
   Widget _configureView(BuildContext context) {
     final kind = _kind!;
+    final palette = MessengerPalette.of(context);
     final theme = Theme.of(context);
     final steps = importInstructions(kind, isMac: Platform.isMacOS);
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Text(_titleFor(kind), style: theme.textTheme.titleLarge),
-        const SizedBox(height: 12),
+        Text(
+          _titleFor(kind),
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: palette.ink,
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 14),
         for (var i = 0; i < steps.length; i++)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: 10),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(radius: 11, child: Text('${i + 1}', style: const TextStyle(fontSize: 12))),
+                Container(
+                  width: 22,
+                  height: 22,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: palette.surface,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: palette.hairline),
+                  ),
+                  child: Text(
+                    '${i + 1}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: palette.secondaryInk,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 10),
-                Expanded(child: Text(steps[i])),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Text(
+                      steps[i],
+                      style: TextStyle(
+                        color: palette.ink,
+                        fontSize: 14,
+                        height: 1.45,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
         const SizedBox(height: 12),
-        if (kind == ImportSourceKind.iphoneBackup) ..._backupPicker(context),
+        if (kind == ImportSourceKind.iphoneBackup)
+          ..._backupPicker(context, palette),
         if (kind == ImportSourceKind.macMessages) ...[
-          _pathField(_path, 'chat.db file', ImportPathKind.file, extensions: const ['db']),
-          _pathField(_attachmentsPath, 'Attachments folder (optional)', ImportPathKind.directory),
+          _pathField(_path, 'chat.db file', ImportPathKind.file,
+              extensions: const ['db']),
+          _pathField(_attachmentsPath, 'Attachments folder (optional)',
+              ImportPathKind.directory),
         ],
         if (kind == ImportSourceKind.smsBackupRestore)
-          _pathField(_path, 'Backup file (sms-....xml or .xml.zip)', ImportPathKind.file, extensions: const ['xml', 'zip']),
-        ExpansionTile(
-          tilePadding: EdgeInsets.zero,
-          title: const Text('Optional: contact names and your number'),
-          children: [
-            _pathField(_vcfPath, 'Contacts file (.vcf) to show names', ImportPathKind.file, extensions: const ['vcf']),
-            if (kind == ImportSourceKind.smsBackupRestore || kind == ImportSourceKind.androidDevice)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: TextField(
-                  controller: _ownNumbers,
-                  decoration: const InputDecoration(
-                    labelText: 'Your own phone number(s), comma separated',
-                    helperText: 'Helps keep you out of group chat member lists.',
+          _pathField(
+            _path,
+            'Backup file (sms-....xml or .xml.zip)',
+            ImportPathKind.file,
+            extensions: const ['xml', 'zip'],
+          ),
+        Theme(
+          data: theme.copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            iconColor: palette.secondaryInk,
+            collapsedIconColor: palette.secondaryInk,
+            title: Text(
+              'Optional: contact names and your number',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: palette.secondaryInk,
+              ),
+            ),
+            children: [
+              _pathField(
+                _vcfPath,
+                'Contacts file (.vcf) to show names',
+                ImportPathKind.file,
+                extensions: const ['vcf'],
+              ),
+              if (kind == ImportSourceKind.smsBackupRestore ||
+                  kind == ImportSourceKind.androidDevice)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: TextField(
+                    controller: _ownNumbers,
+                    decoration: const InputDecoration(
+                      labelText: 'Your own phone number(s), comma separated',
+                      helperText:
+                          'Helps keep you out of group chat member lists.',
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
         if (_error != null)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
+            padding: const EdgeInsets.only(top: 4, bottom: 12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: palette.danger.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: palette.danger.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Icon(
+                      Icons.error_outline_rounded,
+                      size: 18,
+                      color: palette.danger,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: TextStyle(
+                        color: palette.danger,
+                        fontSize: 13.5,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         const SizedBox(height: 8),
         FilledButton.icon(
           onPressed: _scan,
-          icon: const Icon(Icons.search),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+          ),
+          icon: const Icon(Icons.search, size: 19),
           label: const Text('Check messages'),
         ),
       ],
     );
   }
 
-  List<Widget> _backupPicker(BuildContext context) {
+  List<Widget> _backupPicker(BuildContext context, MessengerPalette palette) {
     final backups = _backups;
     return [
       Row(
         children: [
-          Expanded(child: Text('Backups on this computer', style: Theme.of(context).textTheme.titleSmall)),
-          TextButton.icon(onPressed: _findBackups, icon: const Icon(Icons.refresh), label: const Text('Search again')),
+          Expanded(
+            child: Text(
+              'Backups on this computer',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: palette.ink,
+              ),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: _findBackups,
+            style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Search again'),
+          ),
         ],
       ),
-      if (backups == null) const LinearProgressIndicator(),
-      if (backups != null)
-        RadioGroup<String>(
-          groupValue: _path.text,
-          onChanged: (v) => setState(() => _path.text = v ?? ''),
-          child: Column(
-            children: [
-              for (final b in backups)
-                RadioListTile<String>(
-                  value: b.path,
-                  title: Text(b.label),
-                  subtitle: Text([
-                    if (b.lastBackupDate != null) 'Backed up ${DateFormat.yMMMd().add_jm().format(b.lastBackupDate!.toLocal())}',
-                    if (b.isEncrypted == true) 'Encrypted - cannot be read',
-                  ].join(' · ')),
-                ),
-            ],
+      if (backups == null)
+        LinearProgressIndicator(
+          minHeight: 2.5,
+          backgroundColor: palette.hairline,
+          color: palette.accent,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      if (backups != null && backups.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: palette.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: palette.hairline),
+            ),
+            child: RadioGroup<String>(
+              groupValue: _path.text,
+              onChanged: (v) => setState(() => _path.text = v ?? ''),
+              child: Column(
+                children: [
+                  for (var i = 0; i < backups.length; i++) ...[
+                    if (i > 0)
+                      Divider(
+                        height: 1,
+                        thickness: 1,
+                        indent: 48,
+                        color: palette.hairline,
+                      ),
+                    RadioListTile<String>(
+                      value: backups[i].path,
+                      title: Text(
+                        backups[i].label,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: palette.ink,
+                        ),
+                      ),
+                      subtitle: Text(
+                        [
+                          if (backups[i].lastBackupDate != null)
+                            'Backed up ${DateFormat.yMMMd().add_jm().format(backups[i].lastBackupDate!.toLocal())}',
+                          if (backups[i].isEncrypted == true)
+                            'Encrypted - cannot be read',
+                        ].join(' · '),
+                        style: TextStyle(
+                          color: palette.secondaryInk,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       if (_backupSearchNote != null)
-        Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Text(_backupSearchNote!)),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text(
+            _backupSearchNote!,
+            style: TextStyle(color: palette.secondaryInk, fontSize: 13.5),
+          ),
+        ),
       _pathField(_path, 'Or backup folder path', ImportPathKind.directory),
     ];
   }
 
-  Widget _pathField(TextEditingController controller, String label, ImportPathKind kind, {List<String>? extensions}) {
+  Widget _pathField(
+    TextEditingController controller,
+    String label,
+    ImportPathKind kind, {
+    List<String>? extensions,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
@@ -462,16 +695,30 @@ class _ImportScreenState extends State<ImportScreen> {
           suffixIcon: widget.pickPath == null
               ? null
               : IconButton(
-                  icon: Icon(kind == ImportPathKind.directory ? Icons.folder_open : Icons.attach_file),
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
+                  icon: Icon(
+                    kind == ImportPathKind.directory
+                        ? Icons.folder_open
+                        : Icons.attach_file,
+                  ),
                   tooltip: 'Browse',
-                  onPressed: () => _pick(controller, kind, extensions: extensions),
+                  onPressed: () =>
+                      _pick(controller, kind, extensions: extensions),
                 ),
         ),
       ),
     );
   }
 
-  Widget _progressView(BuildContext context, String title, {required bool cancellable}) {
+  Widget _progressView(
+    BuildContext context,
+    String title, {
+    required bool cancellable,
+  }) {
+    final palette = MessengerPalette.of(context);
     final progress = _progress;
     final fraction = progress?.fraction;
     return Padding(
@@ -480,9 +727,22 @@ class _ImportScreenState extends State<ImportScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(title, style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: palette.ink,
+                ),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 16),
-          LinearProgressIndicator(value: fraction),
+          LinearProgressIndicator(
+            minHeight: 3,
+            backgroundColor: palette.hairline,
+            color: palette.accent,
+            borderRadius: BorderRadius.circular(2),
+            value: fraction,
+          ),
           const SizedBox(height: 10),
           Text(
             progress == null
@@ -490,14 +750,31 @@ class _ImportScreenState extends State<ImportScreen> {
                 : '${progress.phase}: ${NumberFormat.decimalPattern().format(progress.processed)}'
                     '${progress.total == null ? '' : ' of ${NumberFormat.decimalPattern().format(progress.total)}'}',
             textAlign: TextAlign.center,
+            style: TextStyle(
+              color: palette.secondaryInk,
+              fontSize: 13.5,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
           if (progress?.detail != null)
-            Text(progress!.detail!, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                progress!.detail!,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: palette.mutedInk, fontSize: 12.5),
+              ),
+            ),
+          const SizedBox(height: 22),
           if (cancellable)
             Center(
               child: OutlinedButton(
                 onPressed: () => _token?.cancel(),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(96, 44),
+                ),
                 child: const Text('Cancel'),
               ),
             ),
@@ -507,33 +784,63 @@ class _ImportScreenState extends State<ImportScreen> {
   }
 
   Widget _previewView(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     final pr = _preview!;
     final fmt = DateFormat.yMMMd();
     final n = NumberFormat.decimalPattern();
-    final range = pr.earliest == null ? 'No messages found' : '${fmt.format(pr.earliest!.toLocal())} – ${fmt.format(pr.latest!.toLocal())}';
+    final range = pr.earliest == null
+        ? 'No messages found'
+        : '${fmt.format(pr.earliest!.toLocal())} – ${fmt.format(pr.latest!.toLocal())}';
+    final stats = <(String, String)>[
+      (
+        'Conversations',
+        '${n.format(pr.threads)} (${n.format(pr.groupThreads)} group${pr.groupThreads == 1 ? '' : 's'})',
+      ),
+      ('Messages', n.format(pr.messages)),
+      if (pr.reactions > 0) ('Reactions', n.format(pr.reactions)),
+      (
+        'Photos & files',
+        '${n.format(pr.attachments - pr.missingAttachments)} of ${n.format(pr.attachments)} available',
+      ),
+      ('Dates', range),
+      if (pr.byService.isNotEmpty)
+        (
+          'Types',
+          pr.byService.entries
+              .map((e) => '${_serviceName(e.key)} ${n.format(e.value)}')
+              .join(' · '),
+        ),
+    ];
+
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Text('Ready to import', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 12),
-        _stat('Conversations',
-            '${n.format(pr.threads)} (${n.format(pr.groupThreads)} group${pr.groupThreads == 1 ? '' : 's'})'),
-        _stat('Messages', n.format(pr.messages)),
-        if (pr.reactions > 0) _stat('Reactions', n.format(pr.reactions)),
-        _stat('Photos & files', '${n.format(pr.attachments - pr.missingAttachments)} of ${n.format(pr.attachments)} available'),
-        _stat('Dates', range),
-        if (pr.byService.isNotEmpty)
-          _stat('Types', pr.byService.entries.map((e) => '${_serviceName(e.key)} ${n.format(e.value)}').join(' · ')),
-        if (pr.issues.isNotEmpty) _issues(pr.issues),
-        const SizedBox(height: 16),
+        Text(
+          'Ready to import',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: palette.ink,
+                letterSpacing: -0.3,
+              ),
+        ),
+        const SizedBox(height: 14),
+        _statsGroup(palette, stats),
+        if (pr.issues.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _issues(context, palette, pr.issues),
+        ],
+        const SizedBox(height: 14),
         Text(
           'Messages already imported earlier are skipped automatically.',
-          style: Theme.of(context).textTheme.bodySmall,
+          style: TextStyle(color: palette.secondaryInk, fontSize: 13),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         FilledButton.icon(
           onPressed: pr.messages + pr.reactions == 0 ? null : _import,
-          icon: const Icon(Icons.download),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+          ),
+          icon: const Icon(Icons.download, size: 19),
           label: Text('Import ${n.format(pr.messages)} messages'),
         ),
       ],
@@ -541,6 +848,7 @@ class _ImportScreenState extends State<ImportScreen> {
   }
 
   Widget _doneView(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     final s = _summary!;
     final n = NumberFormat.decimalPattern();
     final theme = Theme.of(context);
@@ -549,51 +857,165 @@ class _ImportScreenState extends State<ImportScreen> {
         : s.cancelled
             ? 'Import cancelled'
             : 'Import complete';
+    final stats = <(String, String)>[
+      ('Conversations', n.format(s.threads)),
+      ('New messages', n.format(s.messagesAdded)),
+      ('Already imported (skipped)', n.format(s.duplicatesSkipped)),
+      ('Photos & files saved', n.format(s.attachments)),
+      if (s.missingAttachments > 0)
+        ('Files not recoverable', n.format(s.missingAttachments)),
+      ('Time', '${s.elapsed.inSeconds}s'),
+    ];
+
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Text(headline, style: theme.textTheme.titleLarge),
+        Text(
+          headline,
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: palette.ink,
+            letterSpacing: -0.3,
+          ),
+        ),
         if (s.fatalError != null)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(s.fatalError!, style: TextStyle(color: theme.colorScheme.error)),
+            padding: const EdgeInsets.only(top: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: palette.danger.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: palette.danger.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Text(
+                s.fatalError!,
+                style: TextStyle(color: palette.danger, fontSize: 13.5),
+              ),
+            ),
           ),
-        const SizedBox(height: 12),
-        _stat('Conversations', n.format(s.threads)),
-        _stat('New messages', n.format(s.messagesAdded)),
-        _stat('Already imported (skipped)', n.format(s.duplicatesSkipped)),
-        _stat('Photos & files saved', n.format(s.attachments)),
-        if (s.missingAttachments > 0) _stat('Files not recoverable', n.format(s.missingAttachments)),
-        _stat('Time', '${s.elapsed.inSeconds}s'),
+        const SizedBox(height: 14),
+        _statsGroup(palette, stats),
         if (s.cancelled || s.fatalError != null)
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
-            child: Text('Messages read so far were saved. Running the import again continues without duplicates.'),
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(
+              'Messages read so far were saved. Running the import again continues without duplicates.',
+              style: TextStyle(
+                color: palette.secondaryInk,
+                fontSize: 13.5,
+                height: 1.4,
+              ),
+            ),
           ),
-        if (s.issues.isNotEmpty) _issues(s.issues),
-        const SizedBox(height: 16),
-        FilledButton(onPressed: () => Navigator.of(context).maybePop(s), child: const Text('Done')),
+        if (s.issues.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _issues(context, palette, s.issues),
+        ],
+        const SizedBox(height: 18),
+        FilledButton(
+          onPressed: () => Navigator.of(context).maybePop(s),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+          ),
+          child: const Text('Done'),
+        ),
       ],
     );
   }
 
-  Widget _stat(String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
+  Widget _statsGroup(MessengerPalette palette, List<(String, String)> rows) {
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: palette.hairline),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0)
+              Divider(
+                height: 1,
+                thickness: 1,
+                indent: 16,
+                endIndent: 16,
+                color: palette.hairline,
+              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      rows[i].$1,
+                      style: TextStyle(
+                        color: palette.secondaryInk,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      rows[i].$2,
+                      textAlign: TextAlign.end,
+                      style: TextStyle(
+                        color: palette.ink,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _issues(
+    BuildContext context,
+    MessengerPalette palette,
+    List<ImportIssue> issues,
+  ) =>
+      Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          iconColor: palette.secondaryInk,
+          collapsedIconColor: palette.secondaryInk,
+          title: Text(
+            '${issues.length} note${issues.length == 1 ? '' : 's'}',
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w500,
+              color: palette.secondaryInk,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
           children: [
-            Expanded(child: Text(label)),
-            Flexible(child: Text(value, textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.w600))),
+            for (final i in issues.take(50))
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: palette.mutedInk,
+                ),
+                title: Text(
+                  i.toString(),
+                  style: TextStyle(color: palette.secondaryInk, fontSize: 13),
+                ),
+              ),
           ],
         ),
-      );
-
-  Widget _issues(List<ImportIssue> issues) => ExpansionTile(
-        tilePadding: EdgeInsets.zero,
-        title: Text('${issues.length} note${issues.length == 1 ? '' : 's'}'),
-        children: [
-          for (final i in issues.take(50))
-            ListTile(dense: true, leading: const Icon(Icons.info_outline, size: 18), title: Text(i.toString())),
-        ],
       );
 
   static String _titleFor(ImportSourceKind kind) => switch (kind) {

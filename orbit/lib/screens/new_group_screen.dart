@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../data/services.dart';
 import '../models/models.dart';
 import '../state/session.dart';
+import '../theme/orbit_theme.dart';
 import '../widgets/avatar.dart';
 import '../widgets/user_search.dart';
 import 'chat_screen.dart';
@@ -68,6 +69,7 @@ class _NewGroupScreenState extends State<NewGroupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('New group'),
@@ -76,7 +78,18 @@ class _NewGroupScreenState extends State<NewGroupScreen> {
             padding: const EdgeInsets.only(right: 12),
             child: FilledButton(
               onPressed: _saving ? null : _create,
-              style: FilledButton.styleFrom(minimumSize: const Size(88, 44)),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(80, 36),
+                tapTargetSize: MaterialTapTargetSize.padded,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               child: Text(_saving ? 'Creating…' : 'Create'),
             ),
           ),
@@ -85,25 +98,39 @@ class _NewGroupScreenState extends State<NewGroupScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: TextField(
               controller: _name,
               textCapitalization: TextCapitalization.sentences,
               maxLength: 80,
-              decoration: const InputDecoration(labelText: 'Group name'),
+              decoration: InputDecoration(
+                labelText: 'Group name',
+                counterStyle: TextStyle(color: palette.mutedInk, fontSize: 12),
+              ),
             ),
           ),
           if (_selected.isNotEmpty)
             SizedBox(
-              height: 56,
+              height: 48,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 children: [
                   for (final user in _selected.values)
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: InputChip(
+                        backgroundColor: palette.surface,
+                        side: BorderSide(color: palette.hairline),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        labelStyle: TextStyle(
+                          color: palette.ink,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        deleteIconColor: palette.secondaryInk,
                         avatar: AvatarBubble(
                           name: user.displayName,
                           photoUrl: user.photoUrl,
@@ -119,6 +146,7 @@ class _NewGroupScreenState extends State<NewGroupScreen> {
                 ],
               ),
             ),
+          Divider(height: 1, thickness: 1, color: palette.hairline),
           Expanded(
             child: UserSearch(
               onSelect: _toggle,

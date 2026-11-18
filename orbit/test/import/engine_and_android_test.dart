@@ -102,6 +102,50 @@ void main() {
       expect(summary.attachments, 2);
     });
 
+    test('resumes after the last synced ids and only reads new rows', () async {
+      final bridge = await bridgeFromFixture();
+      final sink = InMemoryImportSink();
+      final first = AndroidDeviceSmsSource(bridge: bridge);
+      await ImportEngine().run(first, sink, options: options());
+      expect(first.lastSmsId, greaterThan(0));
+      expect(first.lastMmsId, greaterThan(0));
+      final newId = (first.lastSmsId > first.lastMmsId ? first.lastSmsId : first.lastMmsId) + 1;
+
+      final idle = AndroidDeviceSmsSource(
+        bridge: bridge,
+        smsAfterId: first.lastSmsId,
+        mmsAfterId: first.lastMmsId,
+      );
+      final nothing = await ImportEngine().run(idle, sink, options: options());
+      expect(nothing.messagesAdded + nothing.duplicatesSkipped, 0);
+
+      bridge.sms.add({
+        ...bridge.sms.first,
+        '_id': '$newId',
+        'date': '1900000000000',
+        'body': 'brand new',
+      });
+      final next = AndroidDeviceSmsSource(
+        bridge: bridge,
+        smsAfterId: idle.lastSmsId,
+        mmsAfterId: idle.lastMmsId,
+      );
+      final update = await ImportEngine().run(next, sink, options: options());
+      expect(update.messagesAdded, 1);
+      expect(next.lastSmsId, newId);
+    });
+
+    test('does not prompt for permission during background syncs', () async {
+      final bridge = await bridgeFromFixture()
+        ..granted = false;
+      final summary = await ImportEngine().run(
+        AndroidDeviceSmsSource(bridge: bridge, promptForPermission: false),
+        InMemoryImportSink(),
+      );
+      expect(bridge.permissionRequests, 0);
+      expect(summary.fatalError, contains('permission'));
+    });
+
     test('asks for permission and fails clearly when denied', () async {
       final bridge = await bridgeFromFixture()
         ..granted = false;

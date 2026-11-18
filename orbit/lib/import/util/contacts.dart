@@ -19,6 +19,19 @@ class ContactBook {
 
   String? lookup(String address) => _byAddress[normalizeAddress(address)];
 
+  /// Rows from the phone's address book ({name, number, normalizedNumber}).
+  /// Both number forms are added so either matches.
+  static ContactBook fromPhoneRows(List<Map<String, String>> rows) {
+    final book = ContactBook();
+    for (final r in rows) {
+      final name = r['name'] ?? '';
+      for (final n in [r['number'], r['normalizedNumber']]) {
+        if (n != null) book.add(n, name);
+      }
+    }
+    return book;
+  }
+
   static Future<ContactBook> fromVcfFile(String path) async =>
       parseVcf(await File(path).readAsString());
 

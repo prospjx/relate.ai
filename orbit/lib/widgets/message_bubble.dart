@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../theme/orbit_theme.dart';
 import 'attachment_views.dart';
-import 'avatar.dart';
 
 class MessageBubble extends StatelessWidget {
   const MessageBubble({
@@ -16,9 +15,14 @@ class MessageBubble extends StatelessWidget {
     required this.onOpenActions,
     required this.onToggleReaction,
     required this.onShowReactions,
+    this.senderLabel,
   });
 
   final Message message;
+
+  /// Overrides the name stored on [message], e.g. a contact name looked up
+  /// from the conversation's participants.
+  final String? senderLabel;
   final bool mine;
   final String myUid;
   final bool showSender;
@@ -28,37 +32,58 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
+
     if (message.kind == MessageKind.system) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         child: Center(
           child: Text(
             message.text,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: OrbitColors.mute, fontSize: 12),
+            style: TextStyle(
+              color: palette.mutedInk,
+              fontSize: 12,
+              height: 1.35,
+            ),
           ),
         ),
       );
     }
 
-    final maxWidth = (MediaQuery.sizeOf(context).width * 0.78).clamp(200.0, 520.0);
+    final maxWidth =
+        (MediaQuery.sizeOf(context).width * 0.78).clamp(200.0, 520.0);
     final bare = !message.deleted &&
         message.text.isEmpty &&
         (message.kind == MessageKind.sticker ||
             message.kind == MessageKind.gif ||
             message.kind == MessageKind.image);
-    final fg = mine ? Colors.white : OrbitColors.ink;
-    final meta = mine ? Colors.white.withValues(alpha: 0.72) : OrbitColors.mute;
+    final bg = mine ? palette.outgoingBubble : palette.incomingBubble;
+    final fg = mine ? palette.onOutgoingBubble : palette.onIncomingBubble;
+    final meta = mine
+        ? palette.onOutgoingBubble.withValues(alpha: 0.76)
+        : palette.mutedInk;
+    final footerMeta = bare ? palette.mutedInk : meta;
     final time = DateFormat.jm().format(message.sentAt);
 
     final footer = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (message.edited) ...[
-          Text('edited', style: TextStyle(color: meta, fontSize: 11)),
+          Text(
+            'edited',
+            style: TextStyle(color: footerMeta, fontSize: 11),
+          ),
           const SizedBox(width: 6),
         ],
-        Text(time, style: TextStyle(color: bare ? OrbitColors.mute : meta, fontSize: 11)),
+        Text(
+          time,
+          style: TextStyle(
+            color: footerMeta,
+            fontSize: 11,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
       ],
     );
 
@@ -67,12 +92,16 @@ class MessageBubble extends StatelessWidget {
       content = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.block_rounded, size: 16, color: meta),
+          Icon(Icons.block_rounded, size: 15, color: meta),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
               mine ? 'You deleted this message' : 'This message was deleted',
-              style: TextStyle(color: meta, fontStyle: FontStyle.italic),
+              style: TextStyle(
+                color: meta,
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ),
         ],
@@ -85,37 +114,40 @@ class MessageBubble extends StatelessWidget {
           for (final a in message.attachments)
             Padding(
               padding: EdgeInsets.only(bottom: message.text.isEmpty ? 0 : 6),
-              child: AttachmentView(attachment: a),
+              child: AttachmentView(attachment: a, mine: mine),
             ),
           if (message.text.isNotEmpty)
-            Text(message.text, style: TextStyle(color: fg, height: 1.4)),
+            Text(
+              message.text,
+              style: TextStyle(color: fg, fontSize: 15, height: 1.38),
+            ),
         ],
       );
     }
 
+    final radius = BorderRadius.only(
+      topLeft: const Radius.circular(18),
+      topRight: const Radius.circular(18),
+      bottomLeft: Radius.circular(mine ? 18 : 4),
+      bottomRight: Radius.circular(mine ? 4 : 18),
+    );
+
     final bubble = Container(
       constraints: BoxConstraints(maxWidth: maxWidth),
-      padding: bare
-          ? EdgeInsets.zero
-          : const EdgeInsets.fromLTRB(12, 9, 12, 7),
+      padding:
+          bare ? EdgeInsets.zero : const EdgeInsets.fromLTRB(12, 8, 12, 7),
       decoration: bare
           ? null
           : BoxDecoration(
-              color: mine ? OrbitColors.mine : OrbitColors.theirs,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(16),
-                topRight: const Radius.circular(16),
-                bottomLeft: Radius.circular(mine ? 16 : 4),
-                bottomRight: Radius.circular(mine ? 4 : 16),
-              ),
-              border: mine ? null : Border.all(color: OrbitColors.line),
+              color: bg,
+              borderRadius: radius,
             ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisSize: MainAxisSize.min,
         children: [
           content,
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           footer,
         ],
       ),
@@ -131,18 +163,13 @@ class MessageBubble extends StatelessWidget {
         children: [
           if (showSender && !mine)
             Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 3),
+              padding: const EdgeInsets.only(left: 10, bottom: 3),
               child: Text(
-                message.senderLabel,
+                senderLabel ?? message.senderLabel,
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: HSLColor.fromAHSL(
-                    1,
-                    AvatarBubble.hueFor(message.senderId ?? message.senderLabel),
-                    0.6,
-                    0.68,
-                  ).toColor(),
+                  fontWeight: FontWeight.w500,
+                  color: palette.secondaryInk,
                 ),
               ),
             ),
@@ -151,8 +178,8 @@ class MessageBubble extends StatelessWidget {
             child: Material(
               type: MaterialType.transparency,
               child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                focusColor: OrbitColors.accent.withValues(alpha: 0.35),
+                borderRadius: radius,
+                focusColor: palette.accent.withValues(alpha: 0.18),
                 onTap: onOpenActions,
                 onLongPress: onOpenActions,
                 onSecondaryTap: onOpenActions,
@@ -201,6 +228,7 @@ class _ReactionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     return Semantics(
       button: true,
       selected: mine,
@@ -220,24 +248,35 @@ class _ReactionChip extends StatelessWidget {
               widthFactor: 1,
               heightFactor: 1,
               child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: mine
-                    ? OrbitColors.accent.withValues(alpha: 0.25)
-                    : OrbitColors.raised,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: mine ? OrbitColors.accent : OrbitColors.line,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: mine
+                      ? palette.accent.withValues(alpha: 0.14)
+                      : palette.surface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: mine
+                        ? palette.accent.withValues(alpha: 0.55)
+                        : palette.hairline,
+                  ),
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(emoji, style: const TextStyle(fontSize: 15)),
-                  const SizedBox(width: 4),
-                  Text('$count', style: const TextStyle(fontSize: 12)),
-                ],
-              ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(emoji, style: const TextStyle(fontSize: 14)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$count',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: mine ? palette.accent : palette.secondaryInk,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

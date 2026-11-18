@@ -35,6 +35,7 @@ AI features, the blue orb, events, and relationship health are intentionally out
 - The download button in the inbox imports history from an iPhone backup, a Mac's Messages database, or an SMS Backup & Restore export of Google Messages. See `docs/IMPORT.md`.
 - Imported chats keep their original dates, senders, group names, photos and videos, and tapbacks. Running an import again skips messages already imported.
 - Not available on the web build, which can't read local backup files.
+- On Android, "Sync texts from this phone" (inbox prompt or Profile) copies every SMS/MMS once, then picks up new ones whenever the app is open or brought back to the foreground. Synced texts show up on every device you sign in on. Requires the sideloaded APK: Google Play only grants the SMS permission to default texting apps.
 
 ### Platform notes
 

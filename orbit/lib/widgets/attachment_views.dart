@@ -41,9 +41,14 @@ Size _fit(Attachment a) {
 
 /// Renders one attachment inside a message bubble.
 class AttachmentView extends StatelessWidget {
-  const AttachmentView({super.key, required this.attachment});
+  const AttachmentView({
+    super.key,
+    required this.attachment,
+    this.mine = false,
+  });
 
   final Attachment attachment;
+  final bool mine;
 
   @override
   Widget build(BuildContext context) {
@@ -55,21 +60,23 @@ class AttachmentView extends StatelessWidget {
         return StickerView(stickerId: attachment.stickerId);
       case AttachmentKind.video:
         return PlatformCaps.inlineVideo
-            ? _InlineVideo(attachment: attachment)
+            ? _InlineVideo(attachment: attachment, mine: mine)
             : _FileTile(
                 attachment: attachment,
                 icon: Icons.movie_outlined,
                 fallbackName: 'Video',
                 actionLabel: 'Open video',
+                mine: mine,
               );
       case AttachmentKind.audio:
-        return AudioMessagePlayer(attachment: attachment);
+        return AudioMessagePlayer(attachment: attachment, mine: mine);
       case AttachmentKind.document:
         return _FileTile(
           attachment: attachment,
           icon: Icons.description_outlined,
           fallbackName: 'Document',
           actionLabel: 'Open',
+          mine: mine,
         );
     }
   }
@@ -110,9 +117,15 @@ class _ImageAttachment extends StatelessWidget {
                       color: Colors.black54,
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: const Text('GIF',
-                        style: TextStyle(
-                            fontSize: 11, fontWeight: FontWeight.w700)),
+                    child: const Text(
+                      'GIF',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -135,12 +148,23 @@ class _ImageViewer extends StatelessWidget {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: Text(name ?? 'Photo', style: const TextStyle(fontSize: 16)),
+        foregroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.white, size: 22),
+        shape: const Border(),
+        title: Text(
+          name ?? 'Photo',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         actions: [
           IconButton(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             tooltip: 'Open in browser',
             onPressed: () => openExternally(context, url),
-            icon: const Icon(Icons.open_in_new_rounded),
+            icon: const Icon(Icons.open_in_new_rounded, color: Colors.white),
           ),
         ],
       ),
@@ -160,10 +184,16 @@ class StickerView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     final sticker = stickerById(stickerId);
     if (sticker == null) {
-      return const Text('Sticker',
-          style: TextStyle(color: OrbitColors.soft, fontStyle: FontStyle.italic));
+      return Text(
+        'Sticker',
+        style: TextStyle(
+          color: palette.secondaryInk,
+          fontStyle: FontStyle.italic,
+        ),
+      );
     }
     return SvgPicture.asset(
       sticker.asset,
@@ -180,15 +210,26 @@ class _FileTile extends StatelessWidget {
     required this.icon,
     required this.fallbackName,
     required this.actionLabel,
+    this.mine = false,
   });
 
   final Attachment attachment;
   final IconData icon;
   final String fallbackName;
   final String actionLabel;
+  final bool mine;
 
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
+    final fg = mine ? palette.onOutgoingBubble : palette.onIncomingBubble;
+    final secondary = mine
+        ? palette.onOutgoingBubble.withValues(alpha: 0.78)
+        : palette.secondaryInk;
+    final fill = mine
+        ? Colors.white.withValues(alpha: 0.16)
+        : palette.ink.withValues(alpha: 0.06);
+
     final details = [
       formatBytes(attachment.sizeBytes),
       if (attachment.mimeType != null)
@@ -205,13 +246,13 @@ class _FileTile extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 56, maxWidth: 280),
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.18),
+            color: fill,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 30),
+              Icon(icon, size: 28, color: fg),
               const SizedBox(width: 10),
               Flexible(
                 child: Column(
@@ -222,17 +263,26 @@ class _FileTile extends StatelessWidget {
                       attachment.name ?? fallbackName,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: fg,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     if (details.isNotEmpty)
-                      Text(details,
-                          style: const TextStyle(
-                              fontSize: 12, color: OrbitColors.soft)),
+                      Text(
+                        details,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: secondary,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(Icons.open_in_new_rounded, size: 18),
+              Icon(Icons.open_in_new_rounded, size: 17, color: secondary),
             ],
           ),
         ),
@@ -242,9 +292,10 @@ class _FileTile extends StatelessWidget {
 }
 
 class _InlineVideo extends StatefulWidget {
-  const _InlineVideo({required this.attachment});
+  const _InlineVideo({required this.attachment, this.mine = false});
 
   final Attachment attachment;
+  final bool mine;
 
   @override
   State<_InlineVideo> createState() => _InlineVideoState();
@@ -277,7 +328,9 @@ class _InlineVideoState extends State<_InlineVideo> {
         return;
       }
     }
-    controller.value.isPlaying ? await controller.pause() : await controller.play();
+    controller.value.isPlaying
+        ? await controller.pause()
+        : await controller.play();
     if (mounted) setState(() {});
   }
 
@@ -289,8 +342,10 @@ class _InlineVideoState extends State<_InlineVideo> {
         icon: Icons.movie_outlined,
         fallbackName: 'Video',
         actionLabel: 'Open video',
+        mine: widget.mine,
       );
     }
+    final palette = MessengerPalette.of(context);
     final controller = _controller;
     final ready = controller != null && controller.value.isInitialized;
     final playing = ready && controller.value.isPlaying;
@@ -322,7 +377,10 @@ class _InlineVideoState extends State<_InlineVideo> {
                     child: VideoPlayer(controller),
                   ),
                 if (controller != null && !ready)
-                  const CircularProgressIndicator(strokeWidth: 2),
+                  const CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 if (!playing && (ready || controller == null))
                   Container(
                     width: 52,
@@ -331,7 +389,11 @@ class _InlineVideoState extends State<_InlineVideo> {
                       color: Colors.black54,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.play_arrow_rounded, size: 34),
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      size: 34,
+                      color: Colors.white,
+                    ),
                   ),
                 if (ready)
                   Positioned(
@@ -341,8 +403,10 @@ class _InlineVideoState extends State<_InlineVideo> {
                     child: VideoProgressIndicator(
                       controller,
                       allowScrubbing: true,
-                      colors: const VideoProgressColors(
-                        playedColor: OrbitColors.accent,
+                      colors: VideoProgressColors(
+                        playedColor: palette.accent,
+                        bufferedColor: Colors.white38,
+                        backgroundColor: Colors.white24,
                       ),
                     ),
                   ),
@@ -357,9 +421,14 @@ class _InlineVideoState extends State<_InlineVideo> {
 
 /// Play and pause control for voice messages and audio files.
 class AudioMessagePlayer extends StatefulWidget {
-  const AudioMessagePlayer({super.key, required this.attachment});
+  const AudioMessagePlayer({
+    super.key,
+    required this.attachment,
+    this.mine = false,
+  });
 
   final Attachment attachment;
+  final bool mine;
 
   @override
   State<AudioMessagePlayer> createState() => _AudioMessagePlayerState();
@@ -419,7 +488,8 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
       } else if (_state == PlayerState.paused) {
         await player.resume();
       } else {
-        await player.play(UrlSource(url, mimeType: widget.attachment.mimeType));
+        await player
+            .play(UrlSource(url, mimeType: widget.attachment.mimeType));
       }
     } catch (_) {
       if (mounted) setState(() => _failed = true);
@@ -428,6 +498,20 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
+    final fg =
+        widget.mine ? palette.onOutgoingBubble : palette.onIncomingBubble;
+    final secondary = widget.mine
+        ? palette.onOutgoingBubble.withValues(alpha: 0.78)
+        : palette.secondaryInk;
+    final buttonFill = widget.mine
+        ? Colors.white.withValues(alpha: 0.16)
+        : palette.ink.withValues(alpha: 0.06);
+    final trackColor = widget.mine
+        ? Colors.white.withValues(alpha: 0.25)
+        : palette.ink.withValues(alpha: 0.12);
+    final progressColor = widget.mine ? Colors.white : palette.accent;
+
     final playing = _state == PlayerState.playing;
     final total = _duration ?? Duration.zero;
     final progress = total.inMilliseconds > 0
@@ -439,16 +523,21 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
         children: [
           IconButton(
             tooltip: playing ? 'Pause voice message' : 'Play voice message',
-            onPressed: _failed ? () => openExternally(context, widget.attachment.url) : _toggle,
+            onPressed: _failed
+                ? () => openExternally(context, widget.attachment.url)
+                : _toggle,
             style: IconButton.styleFrom(
               minimumSize: const Size(44, 44),
-              backgroundColor: Colors.white.withValues(alpha: 0.15),
+              backgroundColor: buttonFill,
+              foregroundColor: fg,
             ),
-            icon: Icon(_failed
-                ? Icons.open_in_new_rounded
-                : playing
-                    ? Icons.pause_rounded
-                    : Icons.play_arrow_rounded),
+            icon: Icon(
+              _failed
+                  ? Icons.open_in_new_rounded
+                  : playing
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded,
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -461,7 +550,8 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 4,
-                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    backgroundColor: trackColor,
+                    valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -473,7 +563,11 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
                           : (total > Duration.zero
                               ? formatDuration(total)
                               : 'Voice message'),
-                  style: const TextStyle(fontSize: 12),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: secondary,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
                 ),
               ],
             ),

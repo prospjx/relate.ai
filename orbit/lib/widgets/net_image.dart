@@ -22,6 +22,7 @@ class NetImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MessengerPalette.of(context);
     return Image.network(
       url,
       fit: fit,
@@ -34,7 +35,7 @@ class NetImage extends StatelessWidget {
         return Container(
           width: width,
           height: height,
-          color: OrbitColors.raised,
+          color: palette.surface,
           alignment: Alignment.center,
           child: const SizedBox(
             width: 20,
@@ -46,9 +47,9 @@ class NetImage extends StatelessWidget {
       errorBuilder: (context, error, stack) => Container(
         width: width,
         height: height,
-        color: OrbitColors.raised,
+        color: palette.surface,
         alignment: Alignment.center,
-        child: const Icon(Icons.broken_image_outlined, color: OrbitColors.mute),
+        child: Icon(Icons.broken_image_outlined, color: palette.mutedInk),
       ),
     );
   }

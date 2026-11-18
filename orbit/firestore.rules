@@ -36,6 +36,8 @@ service cloud.firestore {
           && d.get('about', '').size() <= 280
           && d.get('phone', '') is string
           && d.get('phone', '').size() <= 40
+          && d.get('phoneNormalized', '') is string
+          && d.get('phoneNormalized', '').size() <= 40
           && d.get('online', false) is bool;
       }
 
